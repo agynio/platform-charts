@@ -1,0 +1,121 @@
+apiVersion: v2
+name: agyn-platform
+description: Umbrella chart for Agyn production platform workloads.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/agynio/platform-charts
+sources:
+  - https://github.com/agynio/platform-charts
+kubeVersion: ">=1.26.0-0"
+dependencies:
+  - name: gateway
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.22.10
+    condition: gateway.enabled
+  - name: agents
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.7.4
+    condition: agents.enabled
+  - name: agents-orchestrator
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.13.17
+    condition: agents-orchestrator.enabled
+  - name: threads
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.4.12
+    condition: threads.enabled
+  - name: chat
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.3.4
+    condition: chat.enabled
+  - name: users
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.5.2
+    condition: users.enabled
+  - name: organizations
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.4.4
+    condition: organizations.enabled
+  - name: identity
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.2.2
+    condition: identity.enabled
+  - name: authorization
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.5.3
+    condition: authorization.enabled
+  - name: apps
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.4.2
+    condition: apps.enabled
+  - name: runners
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.5.9
+    condition: runners.enabled
+  - name: ziti-management
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.10.10
+    condition: ziti-management.enabled
+  - name: expose
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.4
+    condition: expose.enabled
+  - name: secrets
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.2.0
+    condition: secrets.enabled
+  - name: llm
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.4.3
+    condition: llm.enabled
+  - name: llm-proxy
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.12.1
+    condition: llm-proxy.enabled
+  - name: token-counting
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.3.2
+    condition: token-counting.enabled
+  - name: tracing
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.3.4
+    condition: tracing.enabled
+  - name: notifications
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.2.7
+    condition: notifications.enabled
+  - name: files
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.4
+    condition: files.enabled
+  - name: media-proxy
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.5
+    condition: media-proxy.enabled
+  - name: chat-app
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.4.16
+    condition: chat-app.enabled
+  - name: console-app
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.10.9
+    condition: console-app.enabled
+  - name: tracing-app
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.2.6
+    condition: tracing-app.enabled
+  - name: redis
+    alias: notifications-redis
+    repository: https://charts.bitnami.com/bitnami
+    version: 25.3.2
+    condition: notifications.redis.enabled
+  - name: docker-registry
+    alias: registry-mirror
+    repository: https://twuni.github.io/docker-registry.helm
+    version: 2.2.3
+    condition: registryMirror.enabled
+  - name: ncps
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.3
+    condition: ncps.enabled

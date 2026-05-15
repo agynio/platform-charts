@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "definitions": {
+    "secretRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "existingSecretKey": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "properties": {
+    "s3": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "accessKeyKey": {
+          "type": "string"
+        },
+        "secretKeyKey": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "bucket": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "useSSL": {
+          "type": "boolean"
+        }
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "sslMode": {
+          "type": "string"
+        },
+        "existingSecret": {
+          "type": "string"
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "redis": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "externalAddress": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "database": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "managed",
+                "external"
+              ]
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "existingSecretKeyPattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ]
+        },
+        "oidc": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "issuerUrl": {
+              "type": "string"
+            },
+            "clientId": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,133 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+platform:
+  gateway:
+    url: http://gateway-gateway.platform.svc.cluster.local:8080
+    address: gateway-gateway.platform.svc.cluster.local:8080
+  database:
+    mode: external
+    existingSecret: agyn-app-database-urls
+    existingSecretKeyPattern: "{{ app }}"
+
+apps:
+  reminders:
+    enabled: true
+    serviceToken:
+      existingSecret: reminders-service-token
+      existingSecretKey: token
+    databaseUrl:
+      existingSecret: agyn-app-database-urls
+      existingSecretKey: reminders
+  telegramConnector:
+    enabled: false
+    appId: ""
+    serviceToken:
+      existingSecret: telegram-connector-service-token
+      existingSecretKey: token
+    databaseUrl:
+      existingSecret: agyn-app-database-urls
+      existingSecretKey: telegram-connector
+
+runners:
+  k8s:
+    enabled: true
+    serviceToken:
+      existingSecret: k8s-runner-service-token
+      existingSecretKey: token
+    kubeNamespace: agyn-workloads
+    pvcStorageSize: 10Gi
+    zitiEnabled: true
+    capabilityImplementations:
+      docker: rootless
+
+reminders:
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-app-database-urls
+          key: reminders
+    - name: ZITI_IDENTITY_FILE
+      value: /ziti/identity.json
+    - name: ZITI_SERVICE_NAME
+      value: app-reminders
+    - name: GATEWAY_SERVICE_NAME
+      value: gateway
+    - name: GATEWAY_URL
+      value: http://gateway-gateway.platform.svc.cluster.local:8080
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: reminders-service-token
+          key: token
+
+telegram-connector:
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-app-database-urls
+          key: telegram-connector
+    - name: ZITI_IDENTITY_FILE
+      value: /ziti/identity.json
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: telegram-connector-service-token
+          key: token
+    - name: GATEWAY_URL
+      value: http://gateway-gateway.platform.svc.cluster.local:8080
+    - name: ZITI_SERVICE_NAME
+      value: app-telegram
+    - name: GATEWAY_SERVICE_NAME
+      value: gateway
+    - name: APP_ID
+      value: ""
+    - name: TELEGRAM_BASE_URL
+      value: https://api.telegram.org
+    - name: TELEGRAM_POLL_TIMEOUT
+      value: "25s"
+
+k8s-runner:
+  rbac:
+    clusterWide: true
+  securityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 100
+    runAsGroup: 101
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  env:
+    - name: GRPC_ADDR
+      value: 0.0.0.0:50051
+    - name: KUBE_NAMESPACE
+      value: agyn-workloads
+    - name: PVC_STORAGE_SIZE
+      value: 10Gi
+    - name: ZITI_ENABLED
+      value: "true"
+    - name: GATEWAY_ADDRESS
+      value: gateway-gateway.platform.svc.cluster.local:8080
+    - name: CAPABILITY_IMPLEMENTATIONS
+      value: '{"docker":"rootless"}'
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: k8s-runner-service-token
+          key: token
+    - name: ZITI_ENROLLMENT_TIMEOUT
+      value: 2m
+    - name: LOG_LEVEL
+      value: info
