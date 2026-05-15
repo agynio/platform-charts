@@ -11,6 +11,10 @@ data:
   database-mode: {{ .Values.platform.database.mode | quote }}
   database-secret: {{ .Values.platform.database.existingSecret | quote }}
   s3-secret: {{ .Values.s3.existingSecret | quote }}
+  openfga-api-url: {{ .Values.openfga.apiUrl | quote }}
+  openfga-store-id: {{ .Values.openfga.storeId | quote }}
+  openfga-model-id: {{ .Values.openfga.modelId | quote }}
+  cluster-admin-token-secret: {{ .Values.clusterAdmin.token.existingSecret | quote }}
   registration-note: >-
     App, runner, and service-token registration is outside this chart scope.
     Provide pre-created Kubernetes Secrets referenced by subchart values.

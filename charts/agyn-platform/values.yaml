@@ -52,24 +52,30 @@ s3:
   useSSL: true
 
 openfga:
-  apiUrl: ""
-  storeId: ""
-  modelId: ""
+  apiUrl: &openfgaApiUrl http://openfga.openfga.svc.cluster.local:8080
+  storeId: &openfgaStoreId ""
+  modelId: &openfgaModelId ""
 
 clusterAdmin:
-  existingSecret: agyn-cluster-admin
-  tokenKey: token
-  identityId: ""
+  token:
+    existingSecret: &clusterAdminTokenSecret agyn-cluster-admin
+    existingSecretKey: &clusterAdminTokenSecretKey token
+  identityId: &clusterAdminIdentityId ""
 
 gateway:
   enabled: true
   gateway:
     oidcIssuerUrl: https://issuer.example.com
     oidcClientId: agyn-platform
-    clusterAdminToken: ""
-    clusterAdminIdentityId: ""
+    clusterAdminIdentityId: *clusterAdminIdentityId
     usersGrpcTarget: users:50051
     organizationsGrpcTarget: organizations:50051
+  env:
+    - name: CLUSTER_ADMIN_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: *clusterAdminTokenSecret
+          key: *clusterAdminTokenSecretKey
 
 agents:
   enabled: true
@@ -199,11 +205,11 @@ authorization:
     - name: GRPC_ADDRESS
       value: ":50051"
     - name: OPENFGA_API_URL
-      value: ""
+      value: *openfgaApiUrl
     - name: OPENFGA_STORE_ID
-      value: ""
+      value: *openfgaStoreId
     - name: OPENFGA_MODEL_ID
-      value: ""
+      value: *openfgaModelId
 
 apps:
   enabled: true

@@ -14,7 +14,10 @@
             "enabled": {
               "type": "boolean"
             }
-          }
+          },
+          "required": [
+            "enabled"
+          ]
         },
         "telegramConnector": {
           "type": "object",
@@ -26,7 +29,10 @@
             "appId": {
               "type": "string"
             }
-          }
+          },
+          "required": [
+            "enabled"
+          ]
         }
       }
     },
@@ -41,7 +47,10 @@
             "enabled": {
               "type": "boolean"
             }
-          }
+          },
+          "required": [
+            "enabled"
+          ]
         }
       }
     },
@@ -70,6 +79,22 @@
           "required": [
             "mode"
           ]
+        },
+        "gateway": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            }
+          }
+        },
+        "serviceTokens": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     }
