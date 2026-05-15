@@ -115,3 +115,37 @@ yamllint .
 through Terraform resources. These umbrella charts only deploy workloads and
 wire configuration. Registration IDs and service tokens must be supplied as
 pre-created Kubernetes Secrets or non-secret values where appropriate.
+
+## Override points
+
+The platform chart exposes a top-level non-sensitive OpenFGA contract at
+`openfga.apiUrl`, `openfga.storeId`, and `openfga.modelId`. The chart renders
+those values into the `agyn-platform-openfga` ConfigMap and wires the
+`authorization` subchart through `authorization.extraEnvVarsCM`.
+
+Sensitive cluster-admin token configuration is not exposed as plaintext. The
+`gateway` subchart receives `CLUSTER_ADMIN_TOKEN` through `gateway.env` using a
+Kubernetes Secret reference. Override `gateway.env` directly when your Secret
+name or key differs:
+
+```yaml
+gateway:
+  env:
+    - name: CLUSTER_ADMIN_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: agyn-cluster-admin
+          key: token
+```
+
+The apps chart intentionally exposes only dependency toggles at `apps.*.enabled`
+and `runners.k8s.enabled`. Runtime configuration maps directly to the dependent
+subchart values:
+
+- `reminders.env`
+- `telegram-connector.env`
+- `k8s-runner.env`
+
+Use those paths to override database URL Secret refs, service token Secret refs,
+app IDs, gateway addresses, runner namespace, runner PVC size, and other
+workload environment values.

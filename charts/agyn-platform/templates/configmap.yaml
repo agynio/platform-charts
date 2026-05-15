@@ -14,7 +14,7 @@ data:
   openfga-api-url: {{ .Values.openfga.apiUrl | quote }}
   openfga-store-id: {{ .Values.openfga.storeId | quote }}
   openfga-model-id: {{ .Values.openfga.modelId | quote }}
-  cluster-admin-token-secret: {{ .Values.clusterAdmin.token.existingSecret | quote }}
+  cluster-admin-token-override-path: "gateway.env"
   registration-note: >-
     App, runner, and service-token registration is outside this chart scope.
     Provide pre-created Kubernetes Secrets referenced by subchart values.

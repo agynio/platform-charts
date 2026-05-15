@@ -127,6 +127,21 @@
           }
         }
       }
+    },
+    "openfga": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "apiUrl": {
+          "type": "string"
+        },
+        "storeId": {
+          "type": "string"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      }
     }
   }
 }

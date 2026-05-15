@@ -25,9 +25,6 @@
           "properties": {
             "enabled": {
               "type": "boolean"
-            },
-            "appId": {
-              "type": "string"
             }
           },
           "required": [
@@ -51,50 +48,6 @@
           "required": [
             "enabled"
           ]
-        }
-      }
-    },
-    "platform": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "database": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "mode": {
-              "type": "string",
-              "enum": [
-                "managed",
-                "external"
-              ]
-            },
-            "existingSecret": {
-              "type": "string"
-            },
-            "existingSecretKeyPattern": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "mode"
-          ]
-        },
-        "gateway": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "url": {
-              "type": "string"
-            },
-            "address": {
-              "type": "string"
-            }
-          }
-        },
-        "serviceTokens": {
-          "type": "object",
-          "additionalProperties": true
         }
       }
     }

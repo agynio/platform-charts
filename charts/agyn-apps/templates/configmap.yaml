@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
 data:
-  database-mode: {{ .Values.platform.database.mode | quote }}
-  database-secret: {{ .Values.platform.database.existingSecret | quote }}
+  database-url-override-path: "reminders.env, telegram-connector.env"
+  service-token-override-path: "reminders.env, telegram-connector.env, k8s-runner.env"
   reminders-enabled: {{ .Values.apps.reminders.enabled | quote }}
   telegram-connector-enabled: {{ .Values.apps.telegramConnector.enabled | quote }}
   k8s-runner-enabled: {{ .Values.runners.k8s.enabled | quote }}
