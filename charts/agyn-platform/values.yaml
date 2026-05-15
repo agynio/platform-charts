@@ -1,0 +1,454 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+platform:
+  database:
+    mode: external
+    existingSecret: agyn-platform-database-urls
+    existingSecretKeyPattern: "{{ service }}"
+  serviceEndpoints:
+    authorization: authorization:50051
+    identity: identity:50051
+    notifications: notifications:50051
+    runners: runners:50051
+    zitiManagement: ziti-management:50051
+  oidc:
+    issuerUrl: https://issuer.example.com
+    clientId: agyn-platform
+
+postgres:
+  enabled: false
+  host: ""
+  port: 5432
+  sslMode: require
+  databaseNames:
+    agents: agents
+    agentsOrchestrator: orchestrator
+    apps: apps
+    chat: chat
+    expose: expose
+    files: files
+    identity: identity
+    llm: llm
+    organizations: organizations
+    runners: runners
+    secrets: secrets
+    threads: threads
+    tracing: tracing
+    users: users
+    zitiManagement: ziti_management
+  existingSecret: ""
+  usernameKeyPattern: "{{ service }}-username"
+  passwordKeyPattern: "{{ service }}-password"
+
+s3:
+  existingSecret: agyn-files-s3
+  accessKeyKey: access-key
+  secretKeyKey: secret-key
+  endpoint: s3.example.com
+  bucket: agyn-files
+  region: us-east-1
+  useSSL: true
+
+openfga:
+  apiUrl: ""
+  storeId: ""
+  modelId: ""
+
+clusterAdmin:
+  existingSecret: agyn-cluster-admin
+  tokenKey: token
+  identityId: ""
+
+gateway:
+  enabled: true
+  gateway:
+    oidcIssuerUrl: https://issuer.example.com
+    oidcClientId: agyn-platform
+    clusterAdminToken: ""
+    clusterAdminIdentityId: ""
+    usersGrpcTarget: users:50051
+    organizationsGrpcTarget: organizations:50051
+
+agents:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: agents
+
+agents-orchestrator:
+  enabled: true
+  service:
+    enabled: false
+  env:
+    - name: THREADS_ADDRESS
+      value: threads:50051
+    - name: NOTIFICATIONS_ADDRESS
+      value: notifications:50051
+    - name: AGENTS_ADDRESS
+      value: agents:50051
+    - name: SECRETS_ADDRESS
+      value: secrets:50051
+    - name: RUNNERS_ADDRESS
+      value: runners:50051
+    - name: METERING_SERVICE_ADDRESS
+      value: ""
+    - name: METERING_SAMPLE_INTERVAL
+      value: "60s"
+    - name: ZITI_ENABLED
+      value: "true"
+    - name: ZITI_LEASE_RENEWAL_INTERVAL
+      value: "2m"
+    - name: ZITI_ENROLLMENT_TIMEOUT
+      value: "2m"
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: ziti-management:50051
+    - name: AGENT_GATEWAY_ADDRESS
+      value: gateway:8080
+    - name: AGENT_TRACING_ADDRESS
+      value: tracing:50051
+    - name: POLL_INTERVAL
+      value: "5s"
+    - name: IDLE_TIMEOUT
+      value: "30s"
+    - name: STOP_TIMEOUT_SEC
+      value: ""
+    - name: LEASE_NAME
+      value: ""
+
+threads:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: threads
+    - name: NOTIFICATIONS_ADDRESS
+      value: notifications:50051
+    - name: IDENTITY_ADDRESS
+      value: identity:50051
+    - name: METERING_SERVICE_ADDRESS
+      value: ""
+
+chat:
+  enabled: true
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: chat
+  chat:
+    threadsAddress: threads:50051
+    runnersAddress: runners:50051
+    identityAddress: identity:50051
+
+users:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: users
+    - name: AUTHORIZATION_ADDRESS
+      value: authorization:50051
+    - name: IDENTITY_ADDRESS
+      value: identity:50051
+
+organizations:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: organizations
+    - name: AUTHORIZATION_ADDRESS
+      value: authorization:50051
+    - name: IDENTITY_ADDRESS
+      value: identity:50051
+
+identity:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: identity
+
+authorization:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: OPENFGA_API_URL
+      value: ""
+    - name: OPENFGA_STORE_ID
+      value: ""
+    - name: OPENFGA_MODEL_ID
+      value: ""
+
+apps:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: apps
+    - name: IDENTITY_GRPC_TARGET
+      value: identity:50051
+    - name: AUTHORIZATION_GRPC_TARGET
+      value: authorization:50051
+    - name: ZITI_MANAGEMENT_GRPC_TARGET
+      value: ziti-management:50051
+
+runners:
+  enabled: true
+  env:
+    - name: GRPC_ADDR
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: runners
+    - name: IDENTITY_ADDRESS
+      value: identity:50051
+    - name: AUTHORIZATION_ADDRESS
+      value: authorization:50051
+
+ziti-management:
+  enabled: true
+  updateStrategy:
+    type: Recreate
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 10Mi
+  configMounts:
+    - name: ziti-enrollment
+      sourceName: ziti-management-enrollment
+      type: secret
+      mountPath: /etc/ziti-enrollment
+      readOnly: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: ziti-management
+    - name: ZITI_CONTROLLER_URL
+      value: ""
+    - name: ZITI_CERT_FILE
+      value: /var/lib/ziti/tls.crt
+    - name: ZITI_KEY_FILE
+      value: /var/lib/ziti/tls.key
+    - name: ZITI_CA_FILE
+      value: /var/lib/ziti/ca.crt
+    - name: ZITI_ENROLLMENT_JWT_FILE
+      value: /etc/ziti-enrollment/enrollmentJwt
+    - name: ZITI_IDENTITY_NAME_RESOLVE
+      value: "true"
+
+expose:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: expose
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: ziti-management:50051
+    - name: RUNNERS_ADDRESS
+      value: runners:50051
+    - name: NOTIFICATIONS_ADDRESS
+      value: notifications:50051
+    - name: AUTHORIZATION_ADDRESS
+      value: authorization:50051
+    - name: RECONCILIATION_INTERVAL
+      value: "30s"
+
+secrets:
+  enabled: true
+  database:
+    existingSecret:
+      name: agyn-platform-database-urls
+      key: secrets
+  secrets:
+    encryptionKeyFile: /etc/secrets-encryption/encryptionKey
+    encryptionKeySecretName: secrets-encryption-key
+
+llm:
+  enabled: true
+  llm:
+    databaseUrl:
+      existingSecret: agyn-platform-database-urls
+      existingSecretKey: llm
+
+llm-proxy:
+  enabled: true
+  llmProxy:
+    llmServiceAddress: llm:50051
+    usersServiceAddress: users:50051
+    authorizationServiceAddress: authorization:50051
+    zitiManagementAddress: ziti-management:50051
+    zitiEnabled: true
+
+token-counting:
+  enabled: true
+
+tracing:
+  enabled: true
+  extraEnvVars:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: tracing
+    - name: ZITI_ENABLED
+      value: "true"
+
+notifications:
+  enabled: true
+  redis:
+    enabled: false
+    externalAddress: ""
+  env:
+    - name: GRPC_ADDR
+      value: 0.0.0.0:50051
+    - name: REDIS_ADDR
+      value: ""
+    - name: REDIS_DB
+      value: "0"
+    - name: REDIS_CHANNEL
+      value: notifications.v1
+    - name: AUTHORIZATION_ADDR
+      value: authorization:50051
+    - name: RUNNERS_ADDR
+      value: runners:50051
+    - name: AGENTS_ADDR
+      value: agents:50051
+    - name: TRACING_ADDR
+      value: tracing:50051
+  notifications-redis:
+    architecture: standalone
+    auth:
+      enabled: false
+    master:
+      persistence:
+        enabled: false
+
+notifications-redis:
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
+
+files:
+  enabled: true
+  files:
+    databaseUrl:
+      existingSecret: agyn-platform-database-urls
+      existingSecretKey: files
+    urlExpiry: 1h
+    s3:
+      endpoint: s3.example.com
+      bucket: agyn-files
+      region: us-east-1
+      useSSL: true
+      accessKey:
+        existingSecret: agyn-files-s3
+        existingSecretKey: access-key
+      secretKey:
+        existingSecret: agyn-files-s3
+        existingSecretKey: secret-key
+
+media-proxy:
+  enabled: true
+  mediaProxy:
+    listenAddr: ":8080"
+    oidcIssuerUrl: https://issuer.example.com
+    oidcClientId: agyn-platform
+    usersGrpcTarget: users:50051
+    filesGrpcTarget: files:50051
+    corsAllowedOrigin: ""
+
+chat-app:
+  enabled: true
+  env:
+    - name: OIDC_AUTHORITY
+      value: https://issuer.example.com
+    - name: OIDC_CLIENT_ID
+      value: agyn-platform
+    - name: OIDC_REDIRECT_URI
+      value: ""
+    - name: OIDC_POST_LOGOUT_REDIRECT_URI
+      value: ""
+    - name: OIDC_SCOPE
+      value: openid profile email offline_access
+    - name: API_BASE_URL
+      value: /api
+    - name: MEDIA_PROXY_URL
+      value: ""
+
+console-app:
+  enabled: true
+  env:
+    - name: OIDC_AUTHORITY
+      value: https://issuer.example.com
+    - name: OIDC_CLIENT_ID
+      value: agyn-platform
+    - name: OIDC_SCOPE
+      value: openid profile email offline_access
+    - name: API_BASE_URL
+      value: /api
+
+tracing-app:
+  enabled: true
+  env:
+    - name: API_BASE_URL
+      value: /api
+    - name: OIDC_AUTHORITY
+      value: https://issuer.example.com
+    - name: OIDC_CLIENT_ID
+      value: agyn-platform
+
+registryMirror:
+  enabled: false
+  fullnameOverride: registry-mirror
+  persistence:
+    enabled: true
+    size: 20Gi
+  proxy:
+    enabled: true
+    remoteurl: https://registry-1.docker.io
+
+ncps:
+  enabled: false

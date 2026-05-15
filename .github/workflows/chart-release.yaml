@@ -1,0 +1,57 @@
+name: Chart release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - charts/**
+      - .github/workflows/chart-release.yaml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  CHART_REPOSITORY: ghcr.io/agynio/charts
+
+jobs:
+  package-and-push:
+    name: Package and push charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Log in to GHCR
+        run: |
+          helm registry login "$REGISTRY" \
+            --username "${{ github.actor }}" \
+            --password-stdin <<< "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Update dependencies
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add twuni https://twuni.github.io/docker-registry.helm
+          helm dependency update charts/agyn-platform
+          helm dependency update charts/agyn-apps
+
+      - name: Lint charts
+        run: helm lint charts/agyn-platform charts/agyn-apps
+
+      - name: Package charts
+        run: |
+          mkdir -p .dist
+          helm package charts/agyn-platform --destination .dist
+          helm package charts/agyn-apps --destination .dist
+
+      - name: Push charts
+        run: |
+          for chart in .dist/*.tgz; do
+            helm push "$chart" "oci://$CHART_REPOSITORY"
+          done
