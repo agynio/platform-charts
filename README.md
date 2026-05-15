@@ -116,6 +116,65 @@ through Terraform resources. These umbrella charts only deploy workloads and
 wire configuration. Registration IDs and service tokens must be supplied as
 pre-created Kubernetes Secrets or non-secret values where appropriate.
 
+
+### Platform database and S3 source Secrets
+
+`agyn-platform` reads operator-provided source Secrets and renders internal
+Secrets consumed by dependent service charts. This keeps service chart values
+secret-ref based and avoids plaintext database URLs or S3 credentials in Helm
+values.
+
+Database URLs are read from `platform.database.existingSecret` using
+`platform.database.existingSecretKeyPattern`. The pattern is evaluated with a
+`service` variable for each database-backed service and defaults to the service
+name:
+
+```yaml
+platform:
+  database:
+    mode: external
+    existingSecret: agyn-platform-database-urls
+    existingSecretKeyPattern: "{{ .service }}"
+```
+
+The chart renders `agyn-platform-generated-database-urls`, and every
+DATABASE_URL consumer references that generated Secret with `valueFrom` or the
+subchart's secret-ref fields. The source Secret should contain keys for:
+
+```text
+agents
+agents-orchestrator
+apps
+chat
+expose
+files
+identity
+llm
+organizations
+runners
+secrets
+threads
+tracing
+users
+ziti-management
+```
+
+S3 credentials for the `files` service are read from `s3.existingSecret` and
+rendered into `agyn-platform-generated-files-s3`, which is then wired into
+`files.files.s3.accessKey.existingSecret` and
+`files.files.s3.secretKey.existingSecret`:
+
+```yaml
+s3:
+  existingSecret: agyn-files-s3
+  accessKeyKey: access-key
+  secretKeyKey: secret-key
+  endpoint: s3.example.com
+  bucket: agyn-files
+  region: us-east-1
+  useSSL: true
+```
+
 ## Override points
 
 The platform chart exposes a top-level non-sensitive OpenFGA contract at
