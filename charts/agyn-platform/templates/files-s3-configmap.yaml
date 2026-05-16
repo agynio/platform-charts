@@ -1,0 +1,17 @@
+{{- $_ := required "s3.endpoint is required" .Values.s3.endpoint -}}
+{{- $_ := required "s3.bucket is required" .Values.s3.bucket -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agyn-platform-files-s3-config
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+  S3_ENDPOINT: {{ .Values.s3.endpoint | quote }}
+  S3_BUCKET: {{ .Values.s3.bucket | quote }}
+  S3_REGION: {{ .Values.s3.region | quote }}
+  S3_USE_SSL: {{ .Values.s3.useSSL | toString | quote }}
+  S3_FORCE_PATH_STYLE: {{ .Values.s3.forcePathStyle | toString | quote }}

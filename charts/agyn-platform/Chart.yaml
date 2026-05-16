@@ -85,6 +85,10 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.2.7
     condition: notifications.enabled
+  - name: files
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.4
+    condition: files.enabled
   - name: media-proxy
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.5

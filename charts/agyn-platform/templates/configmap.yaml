@@ -13,6 +13,7 @@ data:
   database-generated-secret: "agyn-platform-generated-database-urls"
   s3-source-secret: {{ .Values.s3.existingSecret | quote }}
   s3-generated-secret: "agyn-platform-generated-files-s3"
+  s3-configmap: "agyn-platform-files-s3-config"
   require-existing-secrets: {{ .Values.validation.requireExistingSecrets | quote }}
   openfga-api-url: {{ .Values.openfga.apiUrl | quote }}
   openfga-store-id: {{ .Values.openfga.storeId | quote }}

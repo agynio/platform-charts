@@ -167,9 +167,12 @@ ziti-management
 S3 credentials for the `files` service are read from `s3.existingSecret` and
 rendered into `agyn-platform-generated-files-s3`, which is then wired into
 `files.files.s3.accessKey.existingSecret` and
-`files.files.s3.secretKey.existingSecret`. The non-secret S3 settings
-`endpoint`, `bucket`, `region`, and `useSSL` are wired into `files.files.s3.*`;
-`forcePathStyle` is exposed to the files container as `S3_FORCE_PATH_STYLE`:
+`files.files.s3.secretKey.existingSecret`. The existing `files` subchart remains
+a chart dependency. The non-secret S3 settings are rendered into the
+`agyn-platform-files-s3-config` ConfigMap and injected into the files subchart
+through `files.env` so user overrides of the top-level S3 contract flow at
+template time. `forcePathStyle` is exposed to the files container as
+`S3_FORCE_PATH_STYLE`:
 
 ```yaml
 s3:
