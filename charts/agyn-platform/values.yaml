@@ -2,6 +2,9 @@ global:
   imageRegistry: ""
   imagePullSecrets: []
 
+validation:
+  requireExistingSecrets: false
+
 platform:
   database:
     mode: external
@@ -50,6 +53,7 @@ s3:
   bucket: agyn-files
   region: us-east-1
   useSSL: true
+  forcePathStyle: false
 
 openfga:
   apiUrl: http://openfga.openfga.svc.cluster.local:8080
@@ -373,22 +377,19 @@ notifications-redis:
 
 files:
   enabled: true
-  files:
-    databaseUrl:
-      existingSecret: agyn-platform-generated-database-urls
-      existingSecretKey: files
-    urlExpiry: 1h
-    s3:
-      endpoint: s3.example.com
-      bucket: agyn-files
-      region: us-east-1
-      useSSL: true
-      accessKey:
-        existingSecret: agyn-platform-generated-files-s3
-        existingSecretKey: access-key
-      secretKey:
-        existingSecret: agyn-platform-generated-files-s3
-        existingSecretKey: secret-key
+  replicaCount: 1
+  image:
+    repository: ghcr.io/agynio/files
+    tag: "0.1.4"
+    pullPolicy: IfNotPresent
+  service:
+    port: 50051
+  databaseUrl:
+    existingSecret: agyn-platform-generated-database-urls
+    existingSecretKey: files
+  grpcAddress: ":50051"
+  maxFileSize: "20971520"
+  urlExpiry: 1h
 
 media-proxy:
   enabled: true

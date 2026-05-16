@@ -41,6 +41,9 @@
         },
         "useSSL": {
           "type": "boolean"
+        },
+        "forcePathStyle": {
+          "type": "boolean"
         }
       }
     },
@@ -140,6 +143,15 @@
         },
         "modelId": {
           "type": "string"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "requireExistingSecrets": {
+          "type": "boolean"
         }
       }
     }

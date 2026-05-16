@@ -139,7 +139,12 @@ platform:
 
 The chart renders `agyn-platform-generated-database-urls`, and every
 DATABASE_URL consumer references that generated Secret with `valueFrom` or the
-subchart's secret-ref fields. The source Secret should contain keys for:
+subchart's secret-ref fields. Set `validation.requireExistingSecrets=true` for
+install/upgrade against a live cluster to fail rendering when the source DB/S3
+Secrets or required keys are missing. This validation uses Helm `lookup`, so it
+requires access to the target cluster and is disabled by default for offline
+`helm lint` / `helm template` workflows. The source Secret should contain keys
+for:
 
 ```text
 agents
@@ -162,7 +167,9 @@ ziti-management
 S3 credentials for the `files` service are read from `s3.existingSecret` and
 rendered into `agyn-platform-generated-files-s3`, which is then wired into
 `files.files.s3.accessKey.existingSecret` and
-`files.files.s3.secretKey.existingSecret`:
+`files.files.s3.secretKey.existingSecret`. The non-secret S3 settings
+`endpoint`, `bucket`, `region`, and `useSSL` are wired into `files.files.s3.*`;
+`forcePathStyle` is exposed to the files container as `S3_FORCE_PATH_STYLE`:
 
 ```yaml
 s3:
@@ -173,6 +180,10 @@ s3:
   bucket: agyn-files
   region: us-east-1
   useSSL: true
+  forcePathStyle: false
+
+validation:
+  requireExistingSecrets: true
 ```
 
 ## Override points
