@@ -1,0 +1,10 @@
+# Helm build output
+*.tgz
+charts/**/charts/
+charts/**/Chart.lock
+.dist/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/

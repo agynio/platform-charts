@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agyn-platform-openfga
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+  OPENFGA_API_URL: {{ .Values.openfga.apiUrl | quote }}
+  OPENFGA_STORE_ID: {{ .Values.openfga.storeId | quote }}
+  OPENFGA_MODEL_ID: {{ .Values.openfga.modelId | quote }}

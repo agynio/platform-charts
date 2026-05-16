@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agyn-apps.fullname" . }}-contract
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-apps.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+  database-url-override-path: "reminders.env, telegram-connector.env"
+  service-token-override-path: "reminders.env, telegram-connector.env, k8s-runner.env"
+  reminders-enabled: {{ .Values.apps.reminders.enabled | quote }}
+  telegram-connector-enabled: {{ .Values.apps.telegramConnector.enabled | quote }}
+  k8s-runner-enabled: {{ .Values.runners.k8s.enabled | quote }}
+  registration-note: >-
+    App and runner registration is outside this chart scope. Provide
+    pre-created service token Secrets referenced by subchart values.
