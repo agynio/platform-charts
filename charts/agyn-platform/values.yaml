@@ -83,7 +83,7 @@ agents:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: agents
 
 agents-orchestrator:
@@ -94,7 +94,7 @@ agents-orchestrator:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: agents-orchestrator
     - name: THREADS_ADDRESS
       value: threads:50051
@@ -139,7 +139,7 @@ threads:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: threads
     - name: NOTIFICATIONS_ADDRESS
       value: notifications:50051
@@ -154,7 +154,7 @@ chat:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: chat
   chat:
     threadsAddress: threads:50051
@@ -169,7 +169,7 @@ users:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: users
     - name: AUTHORIZATION_ADDRESS
       value: authorization:50051
@@ -184,7 +184,7 @@ organizations:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: organizations
     - name: AUTHORIZATION_ADDRESS
       value: authorization:50051
@@ -199,7 +199,7 @@ identity:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: identity
 
 authorization:
@@ -217,7 +217,7 @@ apps:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: apps
     - name: IDENTITY_GRPC_TARGET
       value: identity:50051
@@ -234,7 +234,7 @@ runners:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: runners
     - name: IDENTITY_ADDRESS
       value: identity:50051
@@ -261,7 +261,7 @@ ziti-management:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: ziti-management
     - name: ZITI_CONTROLLER_URL
       value: ""
@@ -284,7 +284,7 @@ expose:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: expose
     - name: ZITI_MANAGEMENT_ADDRESS
       value: ziti-management:50051
@@ -301,7 +301,7 @@ secrets:
   enabled: true
   database:
     existingSecret:
-      name: agyn-platform-generated-database-urls
+      name: agyn-platform-database-urls
       key: secrets
   secrets:
     encryptionKeyFile: /etc/secrets-encryption/encryptionKey
@@ -311,7 +311,7 @@ llm:
   enabled: true
   llm:
     databaseUrl:
-      existingSecret: agyn-platform-generated-database-urls
+      existingSecret: agyn-platform-database-urls
       existingSecretKey: llm
 
 llm-proxy:
@@ -328,12 +328,16 @@ token-counting:
 
 tracing:
   enabled: true
-  extraEnvVars:
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-generated-database-urls
+          name: agyn-platform-database-urls
           key: tracing
+    - name: NOTIFICATIONS_ADDRESS
+      value: notifications:50051
     - name: ZITI_ENABLED
       value: "true"
 
@@ -379,7 +383,7 @@ files:
   enabled: true
   files:
     databaseUrl:
-      existingSecret: agyn-platform-generated-database-urls
+      existingSecret: agyn-platform-database-urls
       existingSecretKey: files
     urlExpiry: 1h
     s3:
@@ -388,10 +392,10 @@ files:
       region: us-east-1
       useSSL: true
       accessKey:
-        existingSecret: agyn-platform-generated-files-s3
+        existingSecret: agyn-files-s3
         existingSecretKey: access-key
       secretKey:
-        existingSecret: agyn-platform-generated-files-s3
+        existingSecret: agyn-files-s3
         existingSecretKey: secret-key
   env:
     - name: S3_ENDPOINT

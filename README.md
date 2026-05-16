@@ -119,15 +119,13 @@ pre-created Kubernetes Secrets or non-secret values where appropriate.
 
 ### Platform database and S3 source Secrets
 
-`agyn-platform` reads operator-provided source Secrets and renders internal
-Secrets consumed by dependent service charts. This keeps service chart values
-secret-ref based and avoids plaintext database URLs or S3 credentials in Helm
-values.
+`agyn-platform` wires workloads directly to operator-provided Secrets. It does
+not render intermediate Secrets and does not require plaintext database URLs or
+S3 credentials in Helm values.
 
-Database URLs are read from `platform.database.existingSecret` using
-`platform.database.existingSecretKeyPattern`. The pattern is evaluated with a
-`service` variable for each database-backed service and defaults to the service
-name:
+Database URLs come from `platform.database.existingSecret`. The key for each
+service is derived from `platform.database.existingSecretKeyPattern`; the
+pattern is evaluated with a `service` variable and defaults to the service name:
 
 ```yaml
 platform:
@@ -137,14 +135,56 @@ platform:
     existingSecretKeyPattern: "{{ .service }}"
 ```
 
-The chart renders `agyn-platform-generated-database-urls`, and every
-DATABASE_URL consumer references that generated Secret with `valueFrom` or the
-subchart's secret-ref fields. Set `validation.requireExistingSecrets=true` for
-install/upgrade against a live cluster to fail rendering when the source DB/S3
-Secrets or required keys are missing. This validation uses Helm `lookup`, so it
-requires access to the target cluster and is disabled by default for offline
-`helm lint` / `helm template` workflows. The source Secret should contain keys
-for:
+Each database-backed dependency must point at that same Secret/key contract.
+The default values already do this. If you change the top-level database Secret
+or key pattern, update the matching dependency override paths in the same values
+file; the chart validates these refs during render and fails if they drift.
+Important override paths are:
+
+```text
+agents.env[].valueFrom.secretKeyRef
+agents-orchestrator.env[].valueFrom.secretKeyRef
+apps.env[].valueFrom.secretKeyRef
+chat.env[].valueFrom.secretKeyRef
+expose.env[].valueFrom.secretKeyRef
+identity.env[].valueFrom.secretKeyRef
+organizations.env[].valueFrom.secretKeyRef
+runners.env[].valueFrom.secretKeyRef
+threads.env[].valueFrom.secretKeyRef
+tracing.env[].valueFrom.secretKeyRef
+users.env[].valueFrom.secretKeyRef
+ziti-management.env[].valueFrom.secretKeyRef
+secrets.database.existingSecret
+llm.llm.databaseUrl
+files.files.databaseUrl
+```
+
+Example custom database Secret and key pattern:
+
+```yaml
+platform:
+  database:
+    existingSecret: prod-db-urls
+    existingSecretKeyPattern: "{{ .service }}-url"
+
+agents:
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: prod-db-urls
+          key: agents-url
+
+files:
+  files:
+    databaseUrl:
+      existingSecret: prod-db-urls
+      existingSecretKey: files-url
+```
+
+The database Secret should contain keys for:
 
 ```text
 agents
@@ -164,15 +204,10 @@ users
 ziti-management
 ```
 
-S3 credentials for the `files` service are read from `s3.existingSecret` and
-rendered into `agyn-platform-generated-files-s3`, which is then wired into
-`files.files.s3.accessKey.existingSecret` and
-`files.files.s3.secretKey.existingSecret`. The existing `files` subchart remains
-a chart dependency. The non-secret S3 settings are rendered into the
-`agyn-platform-files-s3-config` ConfigMap and injected into the files subchart
-through `files.env` so user overrides of the top-level S3 contract flow at
-template time. `forcePathStyle` is exposed to the files container as
-`S3_FORCE_PATH_STYLE`:
+S3 credentials for the `files` service are also wired directly to the
+operator-provided Secret. `files.files.s3.accessKey.existingSecret` and
+`files.files.s3.secretKey.existingSecret` must match `s3.existingSecret`, while
+their key fields must match `s3.accessKeyKey` and `s3.secretKeyKey`:
 
 ```yaml
 s3:
@@ -185,9 +220,32 @@ s3:
   useSSL: true
   forcePathStyle: false
 
-validation:
-  requireExistingSecrets: true
+files:
+  files:
+    s3:
+      endpoint: s3.example.com
+      bucket: agyn-files
+      region: us-east-1
+      useSSL: true
+      accessKey:
+        existingSecret: agyn-files-s3
+        existingSecretKey: access-key
+      secretKey:
+        existingSecret: agyn-files-s3
+        existingSecretKey: secret-key
 ```
+
+The existing `files` subchart remains a chart dependency. The non-secret S3
+settings are set on `files.files.s3.*`; `forcePathStyle` is additionally exposed
+to the files container as `S3_FORCE_PATH_STYLE` through the
+`agyn-platform-files-s3-config` ConfigMap because the files subchart does not
+have a native value for it.
+
+Set `validation.requireExistingSecrets=true` for install/upgrade against a live
+cluster to fail rendering when the referenced DB/S3 Secrets or required keys are
+missing. This validation uses Helm `lookup`, so it requires access to the target
+cluster and is disabled by default for offline `helm lint` / `helm template`
+workflows.
 
 ## Override points
 

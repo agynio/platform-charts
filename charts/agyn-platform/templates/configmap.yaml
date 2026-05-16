@@ -9,10 +9,8 @@ metadata:
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
 data:
   database-mode: {{ .Values.platform.database.mode | quote }}
-  database-source-secret: {{ .Values.platform.database.existingSecret | quote }}
-  database-generated-secret: "agyn-platform-generated-database-urls"
-  s3-source-secret: {{ .Values.s3.existingSecret | quote }}
-  s3-generated-secret: "agyn-platform-generated-files-s3"
+  database-secret: {{ .Values.platform.database.existingSecret | quote }}
+  s3-secret: {{ .Values.s3.existingSecret | quote }}
   s3-configmap: "agyn-platform-files-s3-config"
   require-existing-secrets: {{ .Values.validation.requireExistingSecrets | quote }}
   openfga-api-url: {{ .Values.openfga.apiUrl | quote }}

@@ -14,6 +14,42 @@
           "type": "string"
         }
       }
+    },
+    "databaseSecretRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      }
+    },
+    "databaseUrlRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "existingSecretKey": {
+          "type": "string"
+        }
+      }
+    },
+    "s3CredentialRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "existingSecretKey": {
+          "type": "string"
+        }
+      }
     }
   },
   "properties": {
@@ -152,6 +188,231 @@
       "properties": {
         "requireExistingSecrets": {
           "type": "boolean"
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "agents-orchestrator": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "apps": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "chat": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "expose": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "organizations": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "runners": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "threads": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "tracing": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "users": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "ziti-management": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "existingSecret": {
+              "$ref": "#/definitions/databaseSecretRef"
+            }
+          }
+        }
+      }
+    },
+    "llm": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "llm": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "databaseUrl": {
+              "$ref": "#/definitions/databaseUrlRef"
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "databaseUrl": {
+              "$ref": "#/definitions/databaseUrlRef"
+            },
+            "s3": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "endpoint": {
+                  "type": "string"
+                },
+                "bucket": {
+                  "type": "string"
+                },
+                "region": {
+                  "type": "string"
+                },
+                "useSSL": {
+                  "type": "boolean"
+                },
+                "accessKey": {
+                  "$ref": "#/definitions/s3CredentialRef"
+                },
+                "secretKey": {
+                  "$ref": "#/definitions/s3CredentialRef"
+                }
+              }
+            }
+          }
+        },
+        "env": {
+          "type": "array"
         }
       }
     }
