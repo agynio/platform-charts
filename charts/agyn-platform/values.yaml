@@ -61,6 +61,7 @@ openfga:
   modelId: ""
 
 gateway:
+  fullnameOverride: gateway
   enabled: true
   gateway:
     oidcIssuerUrl: https://issuer.example.com
@@ -68,14 +69,14 @@ gateway:
     clusterAdminIdentityId: ""
     usersGrpcTarget: users:50051
     organizationsGrpcTarget: organizations:50051
-  env:
-    - name: CLUSTER_ADMIN_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: agyn-cluster-admin
-          key: token
+  # CLUSTER_ADMIN_TOKEN and CLUSTER_ADMIN_IDENTITY_ID must both be set
+  # or both be empty (gateway enforces this). The chart ships neither
+  # by default so the gateway can come up cleanly; supply both via
+  # `gateway.env` when wiring a real cluster-admin identity.
+  env: []
 
 agents:
+  fullnameOverride: agents
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -87,6 +88,7 @@ agents:
           key: agents
 
 agents-orchestrator:
+  fullnameOverride: agents-orchestrator
   enabled: true
   service:
     enabled: false
@@ -132,6 +134,7 @@ agents-orchestrator:
       value: ""
 
 threads:
+  fullnameOverride: threads
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -149,6 +152,7 @@ threads:
       value: ""
 
 chat:
+  fullnameOverride: chat
   enabled: true
   env:
     - name: DATABASE_URL
@@ -162,6 +166,7 @@ chat:
     identityAddress: identity:50051
 
 users:
+  fullnameOverride: users
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -177,6 +182,7 @@ users:
       value: identity:50051
 
 organizations:
+  fullnameOverride: organizations
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -192,6 +198,7 @@ organizations:
       value: identity:50051
 
 identity:
+  fullnameOverride: identity
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -203,6 +210,7 @@ identity:
           key: identity
 
 authorization:
+  fullnameOverride: authorization
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -210,6 +218,7 @@ authorization:
   extraEnvVarsCM: agyn-platform-openfga
 
 apps:
+  fullnameOverride: apps
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -227,6 +236,7 @@ apps:
       value: ziti-management:50051
 
 runners:
+  fullnameOverride: runners
   enabled: true
   env:
     - name: GRPC_ADDR
@@ -242,6 +252,7 @@ runners:
       value: authorization:50051
 
 ziti-management:
+  fullnameOverride: ziti-management
   enabled: true
   updateStrategy:
     type: Recreate
@@ -277,6 +288,7 @@ ziti-management:
       value: "true"
 
 expose:
+  fullnameOverride: expose
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -298,6 +310,7 @@ expose:
       value: "30s"
 
 secrets:
+  fullnameOverride: secrets
   enabled: true
   database:
     existingSecret:
@@ -308,6 +321,7 @@ secrets:
     encryptionKeySecretName: secrets-encryption-key
 
 llm:
+  fullnameOverride: llm
   enabled: true
   llm:
     databaseUrl:
@@ -315,6 +329,7 @@ llm:
       existingSecretKey: llm
 
 llm-proxy:
+  fullnameOverride: llm-proxy
   enabled: true
   llmProxy:
     llmServiceAddress: llm:50051
@@ -324,9 +339,11 @@ llm-proxy:
     zitiEnabled: true
 
 token-counting:
+  fullnameOverride: token-counting
   enabled: true
 
 tracing:
+  fullnameOverride: tracing
   enabled: true
   env:
     - name: GRPC_ADDRESS
@@ -342,6 +359,7 @@ tracing:
       value: "true"
 
 notifications:
+  fullnameOverride: notifications
   enabled: true
   redis:
     enabled: false
@@ -380,6 +398,7 @@ notifications-redis:
       enabled: false
 
 files:
+  fullnameOverride: files
   enabled: true
   files:
     databaseUrl:
@@ -425,6 +444,7 @@ files:
           key: S3_FORCE_PATH_STYLE
 
 media-proxy:
+  fullnameOverride: media-proxy
   enabled: true
   mediaProxy:
     listenAddr: ":8080"
@@ -435,6 +455,7 @@ media-proxy:
     corsAllowedOrigin: ""
 
 chat-app:
+  fullnameOverride: chat-app
   enabled: true
   env:
     - name: OIDC_AUTHORITY
@@ -453,6 +474,7 @@ chat-app:
       value: ""
 
 console-app:
+  fullnameOverride: console-app
   enabled: true
   env:
     - name: OIDC_AUTHORITY
@@ -465,6 +487,7 @@ console-app:
       value: /api
 
 tracing-app:
+  fullnameOverride: tracing-app
   enabled: true
   env:
     - name: API_BASE_URL
@@ -485,4 +508,5 @@ registryMirror:
     remoteurl: https://registry-1.docker.io
 
 ncps:
+  fullnameOverride: ncps
   enabled: false
