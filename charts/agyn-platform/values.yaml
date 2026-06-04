@@ -16,9 +16,11 @@ platform:
     notifications: notifications:50051
     runners: runners:50051
     zitiManagement: ziti-management:50051
+  # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
+  # Set both fields together when wiring a real issuer.
   oidc:
-    issuerUrl: https://issuer.example.com
-    clientId: agyn-platform
+    issuerUrl: ""
+    clientId: ""
 
 postgres:
   enabled: false
@@ -64,8 +66,10 @@ gateway:
   fullnameOverride: gateway
   enabled: true
   gateway:
-    oidcIssuerUrl: https://issuer.example.com
-    oidcClientId: agyn-platform
+    # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
+    # Setting only one of these two trips a startup validation.
+    oidcIssuerUrl: ""
+    oidcClientId: ""
     clusterAdminIdentityId: ""
     usersGrpcTarget: users:50051
     organizationsGrpcTarget: organizations:50051
@@ -493,9 +497,9 @@ tracing-app:
     - name: API_BASE_URL
       value: /api
     - name: OIDC_AUTHORITY
-      value: https://issuer.example.com
+      value: ""
     - name: OIDC_CLIENT_ID
-      value: agyn-platform
+      value: ""
 
 registryMirror:
   enabled: false
