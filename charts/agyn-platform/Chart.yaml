@@ -11,11 +11,11 @@ kubeVersion: ">=1.26.0-0"
 dependencies:
   - name: egress
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.0
+    version: 0.1.1
     condition: egress.enabled
   - name: egress-gateway
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.0
+    version: 0.1.1
     condition: egress-gateway.enabled
   - name: gateway
     repository: oci://ghcr.io/agynio/charts
