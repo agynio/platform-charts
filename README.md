@@ -54,12 +54,6 @@ kubectl create secret generic agyn-files-s3 \
 
 ## Install
 
-Authenticate Helm to GHCR if the charts are private:
-
-```sh
-helm registry login ghcr.io
-```
-
 Install the platform chart:
 
 ```sh
