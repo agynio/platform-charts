@@ -9,10 +9,13 @@ platform:
   database:
     mode: external
     existingSecret: &platformDatabaseSecret agyn-platform-database-urls
+    # egress.env DATABASE_URL secretKeyRef.name derives from this anchor.
     existingSecretKeyPattern: "{{ .service }}"
   databaseUrlEnvName: DATABASE_URL
   serviceEndpoints:
     egress: &platformEndpointEgress "egress:50051"
+    # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
+    # from these endpoint anchors; render-time checks prevent override drift.
     authorization: &platformEndpointAuthorization "authorization:50051"
     identity: identity:50051
     notifications: &platformEndpointNotifications "notifications:50051"
@@ -96,6 +99,8 @@ egress:
         secretKeyRef:
           name: *platformDatabaseSecret
           key: egress
+          # The default key is the rendered value of
+          # platform.database.existingSecretKeyPattern for service "egress".
     - name: ZITI_MANAGEMENT_ADDRESS
       value: *platformEndpointZitiManagement
     - name: AUTHORIZATION_SERVICE_ADDRESS
