@@ -23,7 +23,7 @@ dependencies:
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
-    version: 0.4.14
+    version: 0.4.15
     condition: threads.enabled
   - name: chat
     repository: oci://ghcr.io/agynio/charts
@@ -55,7 +55,7 @@ dependencies:
     condition: runners.enabled
   - name: ziti-management
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.11
+    version: 0.10.12
     condition: ziti-management.enabled
   - name: expose
     repository: oci://ghcr.io/agynio/charts
