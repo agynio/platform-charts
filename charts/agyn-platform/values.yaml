@@ -16,6 +16,9 @@ platform:
     authorization: authorization:50051
     identity: identity:50051
     notifications: notifications:50051
+    secrets: secrets:50051
+    metering: metering:50051
+    tracing: tracing:50051
     runners: runners:50051
     zitiManagement: ziti-management:50051
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
@@ -114,6 +117,27 @@ egress:
 egress-gateway:
   enabled: true
   fullnameOverride: egress-gateway
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: EGRESS_ADDRESS
+      value: "egress:50051"
+    - name: SECRETS_SERVICE_ADDRESS
+      value: "secrets:50051"
+    - name: NOTIFICATIONS_ADDRESS
+      value: "notifications:50051"
+    - name: METERING_ADDRESS
+      value: "metering:50051"
+    - name: TRACING_ADDRESS
+      value: "tracing:50051"
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: "ziti-management:50051"
+    - name: ZITI_IDENTITY_FILE
+      value: "/var/lib/ziti/identity.json"
+    - name: EGRESS_CA_CERT_PATH
+      value: "/var/run/agyn/egress-ca/tls.crt"
+    - name: EGRESS_CA_KEY_PATH
+      value: "/var/run/agyn/egress-ca/tls.key"
   extraVolumeMounts:
     - name: ziti-identity
       mountPath: /var/lib/ziti

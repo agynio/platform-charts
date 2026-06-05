@@ -275,6 +275,27 @@ Use those paths to override database URL Secret refs, service token Secret refs,
 app IDs, gateway addresses, runner namespace, runner PVC size, and other
 workload environment values.
 
+Egress-specific dependency overrides are validated against the same top-level
+contract. The Egress control-plane database Secret ref must match
+`platform.database.existingSecret` and the key produced by
+`platform.database.existingSecretKeyPattern` for `egress`. Gateway, Secrets,
+Egress, and Egress Gateway service targets must match
+`platform.serviceEndpoints.*`; render fails if those dependency overrides drift.
+
+Required Egress Gateway env vars are wired by default:
+
+```text
+EGRESS_ADDRESS
+SECRETS_SERVICE_ADDRESS
+NOTIFICATIONS_ADDRESS
+METERING_ADDRESS
+TRACING_ADDRESS
+ZITI_MANAGEMENT_ADDRESS
+ZITI_IDENTITY_FILE
+EGRESS_CA_CERT_PATH
+EGRESS_CA_KEY_PATH
+```
+
 ## Egress deployment contract
 
 `agyn-platform` deploys the Egress control-plane service (`egress`) and the
@@ -297,5 +318,6 @@ in external environments operators must provide an enrolled identity Secret with
 an `identity.json` key before enabling `egress-gateway`.
 
 `gateway.gateway.egressRulesGrpcTarget` and `secrets.egressRules.grpcTarget`
-are both wired to `egress:50051` so Gateway and Secrets call the renamed control
-plane service instead of the legacy `egress-rules` name.
+are both validated against `platform.serviceEndpoints.egress` so Gateway and
+Secrets call the configured Egress control-plane service instead of drifting to
+the legacy `egress-rules` name.

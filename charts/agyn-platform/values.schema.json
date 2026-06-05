@@ -137,6 +137,24 @@
           "properties": {
             "egress": {
               "type": "string"
+            },
+            "authorization": {
+              "type": "string"
+            },
+            "notifications": {
+              "type": "string"
+            },
+            "secrets": {
+              "type": "string"
+            },
+            "metering": {
+              "type": "string"
+            },
+            "tracing": {
+              "type": "string"
+            },
+            "zitiManagement": {
+              "type": "string"
             }
           }
         },
