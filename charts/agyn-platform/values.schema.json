@@ -131,6 +131,33 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "serviceEndpoints": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "egress": {
+              "type": "string"
+            },
+            "authorization": {
+              "type": "string"
+            },
+            "notifications": {
+              "type": "string"
+            },
+            "secrets": {
+              "type": "string"
+            },
+            "metering": {
+              "type": "string"
+            },
+            "tracing": {
+              "type": "string"
+            },
+            "zitiManagement": {
+              "type": "string"
+            }
+          }
+        },
         "database": {
           "type": "object",
           "additionalProperties": true,
@@ -188,6 +215,30 @@
       "properties": {
         "requireExistingSecrets": {
           "type": "boolean"
+        }
+      }
+    },
+    "egress": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "egress-gateway": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
         }
       }
     },

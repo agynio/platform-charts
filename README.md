@@ -54,12 +54,6 @@ kubectl create secret generic agyn-files-s3 \
 
 ## Install
 
-Authenticate Helm to GHCR if the charts are private:
-
-```sh
-helm registry login ghcr.io
-```
-
 Install the platform chart:
 
 ```sh
@@ -280,3 +274,50 @@ subchart values:
 Use those paths to override database URL Secret refs, service token Secret refs,
 app IDs, gateway addresses, runner namespace, runner PVC size, and other
 workload environment values.
+
+Egress-specific dependency overrides are validated against the same top-level
+contract. The Egress control-plane database Secret ref must match
+`platform.database.existingSecret` and the key produced by
+`platform.database.existingSecretKeyPattern` for `egress`. Gateway, Secrets,
+Egress, and Egress Gateway service targets must match
+`platform.serviceEndpoints.*`; render fails if those dependency overrides drift.
+
+Required Egress Gateway env vars are wired by default:
+
+```text
+EGRESS_ADDRESS
+SECRETS_SERVICE_ADDRESS
+NOTIFICATIONS_ADDRESS
+METERING_ADDRESS
+TRACING_ADDRESS
+ZITI_MANAGEMENT_ADDRESS
+ZITI_IDENTITY_FILE
+EGRESS_CA_CERT_PATH
+EGRESS_CA_KEY_PATH
+```
+
+## Egress deployment contract
+
+`agyn-platform` deploys the Egress control-plane service (`egress`) and the
+Egress Gateway data-plane service (`egress-gateway`) by default. The platform
+chart expects the platform database Secret to include an `egress` connection
+string key, matching `platform.database.existingSecretKeyPattern`.
+
+The Egress CA contract is fixed across deployment layers:
+
+- Secret name: `egress-ca`
+- Public certificate key: `tls.crt`
+- Private key key: `tls.key`
+- Egress Gateway mount path: `/var/run/agyn/egress-ca/`
+- Egress Gateway env vars: `EGRESS_CA_CERT_PATH` and `EGRESS_CA_KEY_PATH`
+
+The Egress Gateway Ziti identity is consumed from the
+`egress-gateway-ziti-identity` Secret and mounted at `/var/lib/ziti`. In
+bootstrap environments this Secret is created by the bootstrap platform stack;
+in external environments operators must provide an enrolled identity Secret with
+an `identity.json` key before enabling `egress-gateway`.
+
+`gateway.gateway.egressRulesGrpcTarget` and `secrets.egressRules.grpcTarget`
+are both validated against `platform.serviceEndpoints.egress` so Gateway and
+Secrets call the configured Egress control-plane service instead of drifting to
+the legacy `egress-rules` name.

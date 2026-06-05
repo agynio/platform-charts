@@ -8,14 +8,22 @@ validation:
 platform:
   database:
     mode: external
-    existingSecret: agyn-platform-database-urls
+    existingSecret: &platformDatabaseSecret agyn-platform-database-urls
+    # egress.env DATABASE_URL secretKeyRef.name derives from this anchor.
     existingSecretKeyPattern: "{{ .service }}"
+  databaseUrlEnvName: DATABASE_URL
   serviceEndpoints:
-    authorization: authorization:50051
+    egress: &platformEndpointEgress "egress:50051"
+    # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
+    # from these endpoint anchors; render-time checks prevent override drift.
+    authorization: &platformEndpointAuthorization "authorization:50051"
     identity: identity:50051
-    notifications: notifications:50051
+    notifications: &platformEndpointNotifications "notifications:50051"
+    secrets: &platformEndpointSecrets "secrets:50051"
+    metering: &platformEndpointMetering "metering:50051"
+    tracing: &platformEndpointTracing "tracing:50051"
     runners: runners:50051
-    zitiManagement: ziti-management:50051
+    zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
   # Set both fields together when wiring a real issuer.
   oidc:
@@ -28,6 +36,7 @@ postgres:
   port: 5432
   sslMode: require
   databaseNames:
+    egress: egress
     agents: agents
     agentsOrchestrator: orchestrator
     apps: apps
@@ -78,3 +87,88 @@ registryMirror:
 ncps:
   fullnameOverride: ncps
   enabled: false
+
+egress:
+  enabled: true
+  fullnameOverride: egress
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: egress
+          # The default key is the rendered value of
+          # platform.database.existingSecretKeyPattern for service "egress".
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: *platformEndpointZitiManagement
+    - name: AUTHORIZATION_SERVICE_ADDRESS
+      value: *platformEndpointAuthorization
+    - name: SECRETS_SERVICE_ADDRESS
+      value: *platformEndpointSecrets
+    - name: NOTIFICATIONS_ADDRESS
+      value: *platformEndpointNotifications
+    - name: RECONCILIATION_INTERVAL
+      value: "60s"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+egress-gateway:
+  enabled: true
+  fullnameOverride: egress-gateway
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: EGRESS_ADDRESS
+      value: *platformEndpointEgress
+    - name: SECRETS_SERVICE_ADDRESS
+      value: *platformEndpointSecrets
+    - name: NOTIFICATIONS_ADDRESS
+      value: *platformEndpointNotifications
+    - name: METERING_ADDRESS
+      value: *platformEndpointMetering
+    - name: TRACING_ADDRESS
+      value: *platformEndpointTracing
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: *platformEndpointZitiManagement
+    - name: ZITI_IDENTITY_FILE
+      value: "/var/lib/ziti/identity.json"
+    - name: EGRESS_CA_CERT_PATH
+      value: "/var/run/agyn/egress-ca/tls.crt"
+    - name: EGRESS_CA_KEY_PATH
+      value: "/var/run/agyn/egress-ca/tls.key"
+  extraVolumeMounts:
+    - name: ziti-identity
+      mountPath: /var/lib/ziti
+      readOnly: true
+    - name: egress-ca
+      mountPath: /var/run/agyn/egress-ca
+      readOnly: true
+  extraVolumes:
+    - name: ziti-identity
+      secret:
+        secretName: egress-gateway-ziti-identity
+    - name: egress-ca
+      secret:
+        secretName: egress-ca
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+gateway:
+  gateway:
+    egressRulesGrpcTarget: *platformEndpointEgress
+
+secrets:
+  egressRules:
+    grpcTarget: *platformEndpointEgress

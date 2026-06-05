@@ -17,6 +17,10 @@ data:
   openfga-store-id: {{ .Values.openfga.storeId | quote }}
   openfga-model-id: {{ .Values.openfga.modelId | quote }}
   cluster-admin-token-override-path: "gateway.env"
+  egress-database-key: {{ tpl .Values.platform.database.existingSecretKeyPattern (dict "service" "egress") | quote }}
+  egress-target: {{ .Values.platform.serviceEndpoints.egress | quote }}
+  egress-ca-secret: "egress-ca"
+  egress-gateway-ziti-identity-secret: "egress-gateway-ziti-identity"
   registration-note: >-
     App, runner, and service-token registration is outside this chart scope.
     Provide pre-created Kubernetes Secrets referenced by subchart values.
