@@ -57,6 +57,9 @@ s3:
   useSSL: true
   forcePathStyle: false
 
+notifications-redis:
+  fullnameOverride: notifications-redis
+
 openfga:
   apiUrl: http://openfga.openfga.svc.cluster.local:8080
   storeId: ""
