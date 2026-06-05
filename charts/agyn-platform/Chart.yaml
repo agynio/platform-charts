@@ -2,13 +2,21 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.4.2
+version: 0.5.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
   - https://github.com/agynio/platform-charts
 kubeVersion: ">=1.26.0-0"
 dependencies:
+  - name: egress
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: egress.enabled
+  - name: egress-gateway
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: egress-gateway.enabled
   - name: gateway
     repository: oci://ghcr.io/agynio/charts
     version: 0.22.11

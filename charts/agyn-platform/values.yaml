@@ -10,7 +10,9 @@ platform:
     mode: external
     existingSecret: agyn-platform-database-urls
     existingSecretKeyPattern: "{{ .service }}"
+  databaseUrlEnvName: DATABASE_URL
   serviceEndpoints:
+    egress: egress:50051
     authorization: authorization:50051
     identity: identity:50051
     notifications: notifications:50051
@@ -28,6 +30,7 @@ postgres:
   port: 5432
   sslMode: require
   databaseNames:
+    egress: egress
     agents: agents
     agentsOrchestrator: orchestrator
     apps: apps
@@ -78,3 +81,65 @@ registryMirror:
 ncps:
   fullnameOverride: ncps
   enabled: false
+
+egress:
+  enabled: true
+  fullnameOverride: egress
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: egress
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: "ziti-management:50051"
+    - name: AUTHORIZATION_SERVICE_ADDRESS
+      value: "authorization:50051"
+    - name: SECRETS_SERVICE_ADDRESS
+      value: "secrets:50051"
+    - name: NOTIFICATIONS_ADDRESS
+      value: "notifications:50051"
+    - name: RECONCILIATION_INTERVAL
+      value: "60s"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+egress-gateway:
+  enabled: true
+  fullnameOverride: egress-gateway
+  extraVolumeMounts:
+    - name: ziti-identity
+      mountPath: /var/lib/ziti
+      readOnly: true
+    - name: egress-ca
+      mountPath: /var/run/agyn/egress-ca
+      readOnly: true
+  extraVolumes:
+    - name: ziti-identity
+      secret:
+        secretName: egress-gateway-ziti-identity
+    - name: egress-ca
+      secret:
+        secretName: egress-ca
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+gateway:
+  gateway:
+    egressRulesGrpcTarget: egress:50051
+
+secrets:
+  egressRules:
+    grpcTarget: egress:50051

@@ -131,6 +131,15 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "serviceEndpoints": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "egress": {
+              "type": "string"
+            }
+          }
+        },
         "database": {
           "type": "object",
           "additionalProperties": true,
@@ -188,6 +197,30 @@
       "properties": {
         "requireExistingSecrets": {
           "type": "boolean"
+        }
+      }
+    },
+    "egress": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
+        }
+      }
+    },
+    "egress-gateway": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "env": {
+          "type": "array"
         }
       }
     },

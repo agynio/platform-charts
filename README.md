@@ -280,3 +280,28 @@ subchart values:
 Use those paths to override database URL Secret refs, service token Secret refs,
 app IDs, gateway addresses, runner namespace, runner PVC size, and other
 workload environment values.
+
+## Egress deployment contract
+
+`agyn-platform` deploys the Egress control-plane service (`egress`) and the
+Egress Gateway data-plane service (`egress-gateway`) by default. The platform
+chart expects the platform database Secret to include an `egress` connection
+string key, matching `platform.database.existingSecretKeyPattern`.
+
+The Egress CA contract is fixed across deployment layers:
+
+- Secret name: `egress-ca`
+- Public certificate key: `tls.crt`
+- Private key key: `tls.key`
+- Egress Gateway mount path: `/var/run/agyn/egress-ca/`
+- Egress Gateway env vars: `EGRESS_CA_CERT_PATH` and `EGRESS_CA_KEY_PATH`
+
+The Egress Gateway Ziti identity is consumed from the
+`egress-gateway-ziti-identity` Secret and mounted at `/var/lib/ziti`. In
+bootstrap environments this Secret is created by the bootstrap platform stack;
+in external environments operators must provide an enrolled identity Secret with
+an `identity.json` key before enabling `egress-gateway`.
+
+`gateway.gateway.egressRulesGrpcTarget` and `secrets.egressRules.grpcTarget`
+are both wired to `egress:50051` so Gateway and Secrets call the renamed control
+plane service instead of the legacy `egress-rules` name.

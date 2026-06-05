@@ -1,0 +1,11 @@
+{{- $egressTarget := required "platform.serviceEndpoints.egress is required" .Values.platform.serviceEndpoints.egress -}}
+{{- if and .Values.gateway .Values.gateway.enabled .Values.gateway.gateway -}}
+{{- if ne .Values.gateway.gateway.egressRulesGrpcTarget $egressTarget -}}
+{{- fail (printf "gateway.gateway.egressRulesGrpcTarget must equal platform.serviceEndpoints.egress (%s)" $egressTarget) -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.secrets .Values.secrets.enabled .Values.secrets.egressRules -}}
+{{- if ne .Values.secrets.egressRules.grpcTarget $egressTarget -}}
+{{- fail (printf "secrets.egressRules.grpcTarget must equal platform.serviceEndpoints.egress (%s)" $egressTarget) -}}
+{{- end -}}
+{{- end -}}
