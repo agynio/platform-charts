@@ -29,6 +29,7 @@ platform:
   oidc:
     issuerUrl: ""
     clientId: ""
+    audience: ""
 
 postgres:
   enabled: false

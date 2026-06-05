@@ -189,6 +189,9 @@
             },
             "clientId": {
               "type": "string"
+            },
+            "audience": {
+              "type": "string"
             }
           }
         }
