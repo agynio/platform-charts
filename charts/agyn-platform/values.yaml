@@ -8,19 +8,19 @@ validation:
 platform:
   database:
     mode: external
-    existingSecret: agyn-platform-database-urls
+    existingSecret: &platformDatabaseSecret agyn-platform-database-urls
     existingSecretKeyPattern: "{{ .service }}"
   databaseUrlEnvName: DATABASE_URL
   serviceEndpoints:
-    egress: egress:50051
-    authorization: authorization:50051
+    egress: &platformEndpointEgress "egress:50051"
+    authorization: &platformEndpointAuthorization "authorization:50051"
     identity: identity:50051
-    notifications: notifications:50051
-    secrets: secrets:50051
-    metering: metering:50051
-    tracing: tracing:50051
+    notifications: &platformEndpointNotifications "notifications:50051"
+    secrets: &platformEndpointSecrets "secrets:50051"
+    metering: &platformEndpointMetering "metering:50051"
+    tracing: &platformEndpointTracing "tracing:50051"
     runners: runners:50051
-    zitiManagement: ziti-management:50051
+    zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
   # Set both fields together when wiring a real issuer.
   oidc:
@@ -94,16 +94,16 @@ egress:
     - name: DATABASE_URL
       valueFrom:
         secretKeyRef:
-          name: agyn-platform-database-urls
+          name: *platformDatabaseSecret
           key: egress
     - name: ZITI_MANAGEMENT_ADDRESS
-      value: "ziti-management:50051"
+      value: *platformEndpointZitiManagement
     - name: AUTHORIZATION_SERVICE_ADDRESS
-      value: "authorization:50051"
+      value: *platformEndpointAuthorization
     - name: SECRETS_SERVICE_ADDRESS
-      value: "secrets:50051"
+      value: *platformEndpointSecrets
     - name: NOTIFICATIONS_ADDRESS
-      value: "notifications:50051"
+      value: *platformEndpointNotifications
     - name: RECONCILIATION_INTERVAL
       value: "60s"
   resources:
@@ -121,17 +121,17 @@ egress-gateway:
     - name: GRPC_ADDRESS
       value: ":50051"
     - name: EGRESS_ADDRESS
-      value: "egress:50051"
+      value: *platformEndpointEgress
     - name: SECRETS_SERVICE_ADDRESS
-      value: "secrets:50051"
+      value: *platformEndpointSecrets
     - name: NOTIFICATIONS_ADDRESS
-      value: "notifications:50051"
+      value: *platformEndpointNotifications
     - name: METERING_ADDRESS
-      value: "metering:50051"
+      value: *platformEndpointMetering
     - name: TRACING_ADDRESS
-      value: "tracing:50051"
+      value: *platformEndpointTracing
     - name: ZITI_MANAGEMENT_ADDRESS
-      value: "ziti-management:50051"
+      value: *platformEndpointZitiManagement
     - name: ZITI_IDENTITY_FILE
       value: "/var/lib/ziti/identity.json"
     - name: EGRESS_CA_CERT_PATH
@@ -162,8 +162,8 @@ egress-gateway:
 
 gateway:
   gateway:
-    egressRulesGrpcTarget: egress:50051
+    egressRulesGrpcTarget: *platformEndpointEgress
 
 secrets:
   egressRules:
-    grpcTarget: egress:50051
+    grpcTarget: *platformEndpointEgress
