@@ -13,6 +13,9 @@ data:
 {{ range $stream := $streams }}
 {{ $name := required "nats.platform.streams.definitions[].name is required" $stream.name -}}
 {{ $subjects := required (printf "nats.platform.streams.definitions[%s].subjects is required" $name) $stream.subjects -}}
+{{ $maxBytes := default $.Values.nats.platform.streams.maxBytes $stream.maxBytes -}}
+{{ $maxAge := default $.Values.nats.platform.streams.maxAge $stream.maxAge -}}
+{{ $duplicateWindow := default $.Values.nats.platform.streams.duplicateWindow $stream.duplicateWindow -}}
 
 {{ printf "  %s.json" $name }}: |
     {
@@ -21,14 +24,14 @@ data:
       "retention": {{ default $.Values.nats.platform.streams.retention $stream.retention | quote }},
       "max_consumers": {{ default -1 $stream.maxConsumers }},
       "max_msgs": {{ default -1 $stream.maxMsgs }},
-      "max_bytes": {{ default $.Values.nats.platform.streams.maxBytes $stream.maxBytes }},
+      "max_bytes": {{ printf "%d" ($maxBytes | int64) }},
       "discard": {{ default $.Values.nats.platform.streams.discard $stream.discard | quote }},
-      "max_age": {{ default $.Values.nats.platform.streams.maxAge $stream.maxAge }},
+      "max_age": {{ printf "%d" ($maxAge | int64) }},
       "max_msgs_per_subject": {{ default -1 $stream.maxMsgsPerSubject }},
       "max_msg_size": {{ default -1 $stream.maxMsgSize }},
       "storage": {{ default $.Values.nats.platform.streams.storage $stream.storage | quote }},
       "num_replicas": {{ default $.Values.nats.platform.streams.replicas $stream.replicas }},
-      "duplicate_window": {{ default $.Values.nats.platform.streams.duplicateWindow $stream.duplicateWindow }},
+      "duplicate_window": {{ printf "%d" ($duplicateWindow | int64) }},
       "sealed": false,
       "deny_delete": false,
       "deny_purge": false,
