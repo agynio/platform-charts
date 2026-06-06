@@ -349,6 +349,9 @@
             "authorization": {
               "type": "string"
             },
+            "identity": {
+              "type": "string"
+            },
             "notifications": {
               "type": "string"
             },
@@ -477,6 +480,25 @@
         },
         "env": {
           "type": "array"
+        }
+      }
+    },
+    "groups": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "env": {
+          "type": "array"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },

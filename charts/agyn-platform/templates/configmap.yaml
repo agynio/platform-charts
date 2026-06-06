@@ -22,7 +22,9 @@ data:
   nats-streams: {{ .Values.nats.platform.streams.enabled | quote }}
   cluster-admin-token-override-path: "gateway.env"
   egress-database-key: {{ tpl .Values.platform.database.existingSecretKeyPattern (dict "service" "egress") | quote }}
+  groups-database-key: {{ tpl .Values.platform.database.existingSecretKeyPattern (dict "service" "groups") | quote }}
   egress-target: {{ .Values.platform.serviceEndpoints.egress | quote }}
+  groups-target: "groups:50051"
   egress-ca-secret: "egress-ca"
   egress-gateway-ziti-identity-secret: "egress-gateway-ziti-identity"
   registration-note: >-

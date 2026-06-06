@@ -182,6 +182,7 @@ agents-orchestrator.env[].valueFrom.secretKeyRef
 apps.env[].valueFrom.secretKeyRef
 chat.env[].valueFrom.secretKeyRef
 expose.env[].valueFrom.secretKeyRef
+groups.env[].valueFrom.secretKeyRef
 identity.env[].valueFrom.secretKeyRef
 organizations.env[].valueFrom.secretKeyRef
 runners.env[].valueFrom.secretKeyRef
@@ -228,6 +229,7 @@ apps
 chat
 expose
 files
+groups
 identity
 llm
 organizations

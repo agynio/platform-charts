@@ -53,6 +53,10 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.5.5
     condition: authorization.enabled
+  - name: groups
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: groups.enabled
   - name: apps
     repository: oci://ghcr.io/agynio/charts
     version: 0.4.3

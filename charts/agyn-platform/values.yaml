@@ -17,7 +17,7 @@ platform:
     # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
     # from these endpoint anchors; render-time checks prevent override drift.
     authorization: &platformEndpointAuthorization "authorization:50051"
-    identity: identity:50051
+    identity: &platformEndpointIdentity "identity:50051"
     notifications: &platformEndpointNotifications "notifications:50051"
     secrets: &platformEndpointSecrets "secrets:50051"
     metering: &platformEndpointMetering "metering:50051"
@@ -42,6 +42,7 @@ postgres:
   sslMode: require
   databaseNames:
     egress: egress
+    groups: groups
     agents: agents
     agentsOrchestrator: orchestrator
     apps: apps
@@ -219,6 +220,33 @@ egress-gateway:
     limits:
       cpu: 1000m
       memory: 512Mi
+
+groups:
+  enabled: false
+  fullnameOverride: groups
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: groups
+          # The default key is the rendered platform database secret key
+          # pattern for service "groups".
+    - name: AUTHORIZATION_GRPC_TARGET
+      value: *platformEndpointAuthorization
+    - name: IDENTITY_GRPC_TARGET
+      value: *platformEndpointIdentity
+    - name: NATS_URL
+      value: *platformEndpointNats
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 gateway:
   gateway:
