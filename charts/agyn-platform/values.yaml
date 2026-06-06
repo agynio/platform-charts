@@ -110,9 +110,11 @@ nats:
       retention: limits
       storage: file
       discard: old
-      maxAge: 7d
-      maxBytes: 1Gi
-      duplicateWindow: 2m
+      # Stream config JSON uses the NATS API schema: durations are
+      # nanoseconds and sizes are bytes.
+      maxAge: 604800000000000
+      maxBytes: 1073741824
+      duplicateWindow: 120000000000
       waitTimeout: 120s
       definitions:
         - name: AGYN_GROUPS

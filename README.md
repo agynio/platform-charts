@@ -138,8 +138,10 @@ nats:
 
 The stream defaults follow the architecture contract: file storage,
 limits-based retention, 7-day replay window, 1Gi per stream, one replica, and a
-2-minute duplicate window. Production deployments can raise
-`nats.platform.streams.replicas` and the upstream NATS cluster settings
+2-minute duplicate window. The JSON consumed by the stream configuration Job
+uses the NATS API schema, so stream duration values are configured in
+nanoseconds and stream sizes are configured in bytes. Production deployments can
+raise `nats.platform.streams.replicas` and the upstream NATS cluster settings
 together.
 
 ## Registration and tokens

@@ -38,6 +38,7 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo add twuni https://twuni.github.io/docker-registry.helm
+          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
           helm dependency update charts/agyn-platform
           helm dependency update charts/agyn-apps
 

@@ -81,24 +81,20 @@
           "type": "string"
         },
         "maxAge": {
-          "type": "string"
+          "type": "integer",
+          "minimum": 0
         },
         "maxBytes": {
-          "oneOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            }
-          ]
+          "type": "integer",
+          "minimum": -1
         },
         "replicas": {
           "type": "integer",
           "minimum": 1
         },
         "duplicateWindow": {
-          "type": "string"
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": [
@@ -313,20 +309,16 @@
                   "type": "string"
                 },
                 "maxAge": {
-                  "type": "string"
+                  "type": "integer",
+                  "minimum": 0
                 },
                 "maxBytes": {
-                  "oneOf": [
-                    {
-                      "type": "integer"
-                    },
-                    {
-                      "type": "string"
-                    }
-                  ]
+                  "type": "integer",
+                  "minimum": -1
                 },
                 "duplicateWindow": {
-                  "type": "string"
+                  "type": "integer",
+                  "minimum": 0
                 },
                 "waitTimeout": {
                   "type": "string"
