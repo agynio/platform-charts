@@ -103,6 +103,47 @@ helm package charts/agyn-apps --destination .dist
 yamllint .
 ```
 
+## NATS JetStream event bus
+
+`agyn-platform` can deploy NATS with JetStream as an optional dependency for
+durable platform service events. It is disabled by default for backwards
+compatibility. Enable it with:
+
+```yaml
+nats:
+  enabled: true
+```
+
+Default NATS settings deploy the upstream `nats` Helm chart with JetStream file
+storage, a persistent volume claim, and the stable in-cluster endpoint
+`nats://nats:4222`. The platform contract exposes that endpoint as
+`platform.eventBus.url` and the future workload environment variable name as
+`platform.eventBus.urlEnvName` (`NATS_URL`).
+
+The chart also renders a stream configuration Job when
+`nats.platform.streams.enabled` is true. The default streams are:
+
+```yaml
+nats:
+  platform:
+    streams:
+      definitions:
+        - name: AGYN_GROUPS
+          subjects:
+            - agyn.groups.>
+        - name: AGYN_NETWORKS
+          subjects:
+            - agyn.networks.>
+```
+
+The stream defaults follow the architecture contract: file storage,
+limits-based retention, 7-day replay window, 1Gi per stream, one replica, and a
+2-minute duplicate window. The JSON consumed by the stream configuration Job
+uses the NATS API schema, so stream duration values are configured in
+nanoseconds and stream sizes are configured in bytes. Production deployments can
+raise `nats.platform.streams.replicas` and the upstream NATS cluster settings
+together.
+
 ## Registration and tokens
 
 `agynio/bootstrap` currently registers apps/runners and creates service tokens
