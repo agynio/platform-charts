@@ -24,6 +24,10 @@ platform:
     tracing: &platformEndpointTracing "tracing:50051"
     runners: runners:50051
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
+    nats: &platformEndpointNats "nats://nats:4222"
+  eventBus:
+    url: *platformEndpointNats
+    urlEnvName: NATS_URL
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
   # Set both fields together when wiring a real issuer.
   oidc:
@@ -69,6 +73,54 @@ s3:
 
 notifications-redis:
   fullnameOverride: notifications-redis
+
+nats:
+  enabled: false
+  fullnameOverride: nats
+  config:
+    jetstream:
+      enabled: true
+      fileStore:
+        enabled: true
+        pvc:
+          enabled: true
+          size: 10Gi
+        maxSize: 10Gi
+      memoryStore:
+        enabled: false
+  service:
+    enabled: true
+    ports:
+      nats:
+        enabled: true
+      monitor:
+        enabled: false
+  natsBox:
+    enabled: false
+  platform:
+    streams:
+      enabled: true
+      image:
+        repository: natsio/nats-box
+        tag: 0.18.0
+        pullPolicy: IfNotPresent
+      backoffLimit: 6
+      restartPolicy: OnFailure
+      replicas: 1
+      retention: limits
+      storage: file
+      discard: old
+      maxAge: 7d
+      maxBytes: 1Gi
+      duplicateWindow: 2m
+      waitTimeout: 120s
+      definitions:
+        - name: AGYN_GROUPS
+          subjects:
+            - agyn.groups.>
+        - name: AGYN_NETWORKS
+          subjects:
+            - agyn.networks.>
 
 openfga:
   apiUrl: http://openfga.openfga.svc.cluster.local:8080

@@ -16,6 +16,10 @@ data:
   openfga-api-url: {{ .Values.openfga.apiUrl | quote }}
   openfga-store-id: {{ .Values.openfga.storeId | quote }}
   openfga-model-id: {{ .Values.openfga.modelId | quote }}
+  event-bus-url-env-name: {{ .Values.platform.eventBus.urlEnvName | quote }}
+  nats-url: {{ .Values.platform.eventBus.url | quote }}
+  nats-endpoint: {{ .Values.platform.serviceEndpoints.nats | quote }}
+  nats-streams: {{ .Values.nats.platform.streams.enabled | quote }}
   cluster-admin-token-override-path: "gateway.env"
   egress-database-key: {{ tpl .Values.platform.database.existingSecretKeyPattern (dict "service" "egress") | quote }}
   egress-target: {{ .Values.platform.serviceEndpoints.egress | quote }}

@@ -1,0 +1,49 @@
+{{- if and .Values.nats.enabled .Values.nats.platform.streams.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "agyn-platform.fullname" . }}-nats-streams
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+spec:
+  backoffLimit: {{ .Values.nats.platform.streams.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: {{ .Values.nats.platform.streams.restartPolicy }}
+      containers:
+        - name: configure-streams
+          image: "{{ .Values.nats.platform.streams.image.repository }}:{{ .Values.nats.platform.streams.image.tag }}"
+          imagePullPolicy: {{ .Values.nats.platform.streams.image.pullPolicy }}
+          env:
+            - name: NATS_URL
+              value: {{ .Values.platform.eventBus.url | quote }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              for config in /etc/agyn/nats-streams/*.json; do
+                stream="$(basename "$config" .json)"
+                nats --server "$NATS_URL" \
+                  --timeout {{ .Values.nats.platform.streams.waitTimeout | quote }} \
+                  stream add --config "$config" --defaults || \
+                  nats --server "$NATS_URL" \
+                    --timeout {{ .Values.nats.platform.streams.waitTimeout | quote }} \
+                    stream edit "$stream" --config "$config" --force
+              done
+          volumeMounts:
+            - name: stream-config
+              mountPath: /etc/agyn/nats-streams
+              readOnly: true
+      volumes:
+        - name: stream-config
+          configMap:
+            name: {{ include "agyn-platform.fullname" . }}-nats-streams
+{{- end -}}

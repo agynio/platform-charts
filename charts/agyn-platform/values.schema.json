@@ -50,6 +50,61 @@
           "type": "string"
         }
       }
+    },
+    "natsStream": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "retention": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string",
+          "enum": [
+            "file",
+            "memory"
+          ]
+        },
+        "discard": {
+          "type": "string"
+        },
+        "maxAge": {
+          "type": "string"
+        },
+        "maxBytes": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "duplicateWindow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "subjects"
+      ]
     }
   },
   "properties": {
@@ -127,6 +182,167 @@
         }
       }
     },
+    "nats": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "jetstream": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "fileStore": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "dir": {
+                      "type": "string"
+                    },
+                    "maxSize": {
+                      "type": "string"
+                    },
+                    "pvc": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "size": {
+                          "type": "string"
+                        },
+                        "storageClassName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "memoryStore": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "platform": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "streams": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "image": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "repository": {
+                      "type": "string"
+                    },
+                    "tag": {
+                      "type": "string"
+                    },
+                    "pullPolicy": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "backoffLimit": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "restartPolicy": {
+                  "type": "string",
+                  "enum": [
+                    "Never",
+                    "OnFailure"
+                  ]
+                },
+                "replicas": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "retention": {
+                  "type": "string"
+                },
+                "storage": {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "memory"
+                  ]
+                },
+                "discard": {
+                  "type": "string"
+                },
+                "maxAge": {
+                  "type": "string"
+                },
+                "maxBytes": {
+                  "oneOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "duplicateWindow": {
+                  "type": "string"
+                },
+                "waitTimeout": {
+                  "type": "string"
+                },
+                "definitions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/natsStream"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "platform": {
       "type": "object",
       "additionalProperties": true,
@@ -154,6 +370,21 @@
               "type": "string"
             },
             "zitiManagement": {
+              "type": "string"
+            },
+            "nats": {
+              "type": "string"
+            }
+          }
+        },
+        "eventBus": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "urlEnvName": {
               "type": "string"
             }
           }

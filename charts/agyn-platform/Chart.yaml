@@ -93,6 +93,10 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.2.8
     condition: notifications.enabled
+  - name: nats
+    repository: https://nats-io.github.io/k8s/helm/charts/
+    version: 2.14.0
+    condition: nats.enabled
   - name: files
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.6

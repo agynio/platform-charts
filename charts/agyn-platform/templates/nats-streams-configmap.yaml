@@ -1,0 +1,45 @@
+{{- if and .Values.nats.enabled .Values.nats.platform.streams.enabled -}}
+{{- $streams := required "nats.platform.streams.definitions must include at least one stream" .Values.nats.platform.streams.definitions -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agyn-platform.fullname" . }}-nats-streams
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+{{ range $stream := $streams }}
+{{ $name := required "nats.platform.streams.definitions[].name is required" $stream.name -}}
+{{ $subjects := required (printf "nats.platform.streams.definitions[%s].subjects is required" $name) $stream.subjects -}}
+
+{{ printf "  %s.json" $name }}: |
+    {
+      "name": {{ $name | quote }},
+      "subjects": {{ $subjects | toJson }},
+      "retention": {{ default $.Values.nats.platform.streams.retention $stream.retention | quote }},
+      "max_consumers": {{ default -1 $stream.maxConsumers }},
+      "max_msgs": {{ default -1 $stream.maxMsgs }},
+      "max_bytes": {{ default $.Values.nats.platform.streams.maxBytes $stream.maxBytes | quote }},
+      "discard": {{ default $.Values.nats.platform.streams.discard $stream.discard | quote }},
+      "max_age": {{ default $.Values.nats.platform.streams.maxAge $stream.maxAge | quote }},
+      "max_msgs_per_subject": {{ default -1 $stream.maxMsgsPerSubject }},
+      "max_msg_size": {{ default -1 $stream.maxMsgSize }},
+      "storage": {{ default $.Values.nats.platform.streams.storage $stream.storage | quote }},
+      "num_replicas": {{ default $.Values.nats.platform.streams.replicas $stream.replicas }},
+      "duplicate_window": {{ default $.Values.nats.platform.streams.duplicateWindow $stream.duplicateWindow | quote }},
+      "sealed": false,
+      "deny_delete": false,
+      "deny_purge": false,
+      "allow_rollup_hdrs": false,
+      "allow_direct": false,
+      "mirror_direct": false,
+      "discard_new_per_subject": false,
+      "allow_msg_ttl": false,
+      "metadata": {
+        "managed_by": "agyn-platform"
+      }
+    }
+{{ end }}
+{{- end -}}
