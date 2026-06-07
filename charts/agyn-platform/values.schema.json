@@ -349,6 +349,9 @@
             "authorization": {
               "type": "string"
             },
+            "groups": {
+              "type": "string"
+            },
             "identity": {
               "type": "string"
             },

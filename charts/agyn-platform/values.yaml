@@ -17,6 +17,7 @@ platform:
     # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
     # from these endpoint anchors; render-time checks prevent override drift.
     authorization: &platformEndpointAuthorization "authorization:50051"
+    groups: &platformEndpointGroups "groups:50051"
     identity: &platformEndpointIdentity "identity:50051"
     notifications: &platformEndpointNotifications "notifications:50051"
     secrets: &platformEndpointSecrets "secrets:50051"
