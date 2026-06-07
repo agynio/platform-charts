@@ -182,6 +182,7 @@ agents-orchestrator.env[].valueFrom.secretKeyRef
 apps.env[].valueFrom.secretKeyRef
 chat.env[].valueFrom.secretKeyRef
 expose.env[].valueFrom.secretKeyRef
+groups.env[].valueFrom.secretKeyRef
 identity.env[].valueFrom.secretKeyRef
 organizations.env[].valueFrom.secretKeyRef
 runners.env[].valueFrom.secretKeyRef
@@ -228,6 +229,7 @@ apps
 chat
 expose
 files
+groups
 identity
 llm
 organizations
@@ -238,6 +240,51 @@ tracing
 users
 ziti-management
 ```
+
+### Groups event bus enablement
+
+`groups.enabled=true` requires a reachable NATS event bus because the Groups
+service publishes membership events on startup paths. Use one of these options:
+
+```yaml
+groups:
+  enabled: true
+nats:
+  enabled: true
+```
+
+Or point the platform event bus contract at an externally managed NATS endpoint:
+
+```yaml
+groups:
+  enabled: true
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: agyn-platform-database-urls
+          key: groups
+    - name: AUTHORIZATION_GRPC_TARGET
+      value: authorization:50051
+    - name: IDENTITY_GRPC_TARGET
+      value: identity:50051
+    - name: NATS_URL
+      value: nats://external-nats.example.com:4222
+platform:
+  serviceEndpoints:
+    nats: nats://external-nats.example.com:4222
+  eventBus:
+    url: nats://external-nats.example.com:4222
+```
+
+When `groups.enabled=true`, render-time validation fails if the chart is still
+using the default in-cluster NATS endpoint while `nats.enabled=false`. Groups
+service target metadata comes from `platform.serviceEndpoints.groups` and must
+match the rendered Groups service target from `groups.fullnameOverride`.
+External event bus values must also update `groups.env[NATS_URL]` because the
+Groups dependency consumes its environment list directly.
 
 S3 credentials for the `files` service are also wired directly to the
 operator-provided Secret. `files.files.s3.accessKey.existingSecret` and
