@@ -7,6 +7,7 @@
 {{- $notificationsTarget := required "platform.serviceEndpoints.notifications is required" .Values.platform.serviceEndpoints.notifications -}}
 {{- $meteringTarget := required "platform.serviceEndpoints.metering is required" .Values.platform.serviceEndpoints.metering -}}
 {{- $tracingTarget := required "platform.serviceEndpoints.tracing is required" .Values.platform.serviceEndpoints.tracing -}}
+{{- $agentsTarget := required "platform.serviceEndpoints.agents is required" .Values.platform.serviceEndpoints.agents -}}
 {{- $zitiManagementTarget := required "platform.serviceEndpoints.zitiManagement is required" .Values.platform.serviceEndpoints.zitiManagement -}}
 {{- $egressEnv := dict -}}
 {{- range $env := .Values.egress.env | default list -}}
@@ -41,7 +42,7 @@
 {{- range $env := index .Values "egress-gateway" "env" | default list -}}
 {{- $_ := set $gatewayEnv $env.name $env -}}
 {{- end -}}
-{{- $gatewayServiceEnv := dict "EGRESS_ADDRESS" $egressTarget "SECRETS_SERVICE_ADDRESS" $secretsTarget "NOTIFICATIONS_ADDRESS" $notificationsTarget "METERING_ADDRESS" $meteringTarget "TRACING_ADDRESS" $tracingTarget "ZITI_MANAGEMENT_ADDRESS" $zitiManagementTarget -}}
+{{- $gatewayServiceEnv := dict "EGRESS_ADDRESS" $egressTarget "SECRETS_SERVICE_ADDRESS" $secretsTarget "NOTIFICATIONS_ADDRESS" $notificationsTarget "METERING_ADDRESS" $meteringTarget "TRACING_ADDRESS" $tracingTarget "AGENTS_SERVICE_ADDRESS" $agentsTarget "ZITI_MANAGEMENT_ADDRESS" $zitiManagementTarget -}}
 {{- range $name, $target := $gatewayServiceEnv -}}
 {{- $env := required (printf "egress-gateway.env must include %s" $name) (get $gatewayEnv $name) -}}
 {{- if ne $env.value $target -}}

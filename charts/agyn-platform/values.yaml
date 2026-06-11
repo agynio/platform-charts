@@ -23,6 +23,7 @@ platform:
     secrets: &platformEndpointSecrets "secrets:50051"
     metering: &platformEndpointMetering "metering:50051"
     tracing: &platformEndpointTracing "tracing:50051"
+    agents: &platformEndpointAgents "agents:50051"
     runners: runners:50051
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
     nats: &platformEndpointNats "nats://nats:4222"
@@ -192,6 +193,8 @@ egress-gateway:
       value: *platformEndpointMetering
     - name: TRACING_ADDRESS
       value: *platformEndpointTracing
+    - name: AGENTS_SERVICE_ADDRESS
+      value: *platformEndpointAgents
     - name: ZITI_MANAGEMENT_ADDRESS
       value: *platformEndpointZitiManagement
     - name: ZITI_IDENTITY_FILE
