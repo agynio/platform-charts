@@ -367,6 +367,9 @@
             "tracing": {
               "type": "string"
             },
+            "agents": {
+              "type": "string"
+            },
             "zitiManagement": {
               "type": "string"
             },
