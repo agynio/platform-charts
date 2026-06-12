@@ -199,6 +199,8 @@ egress-gateway:
       value: *platformEndpointZitiManagement
     - name: ZITI_IDENTITY_FILE
       value: "/var/lib/ziti/identity.json"
+    - name: ZITI_ENROLLMENT_JWT_FILE
+      value: "/var/run/ziti/enrollment/enrollmentJwt"
     - name: EGRESS_CA_CERT_PATH
       value: "/var/run/agyn/egress-ca/tls.crt"
     - name: EGRESS_CA_KEY_PATH
@@ -206,14 +208,18 @@ egress-gateway:
   extraVolumeMounts:
     - name: ziti-identity
       mountPath: /var/lib/ziti
+    - name: ziti-enrollment
+      mountPath: /var/run/ziti/enrollment
       readOnly: true
     - name: egress-ca
       mountPath: /var/run/agyn/egress-ca
       readOnly: true
   extraVolumes:
     - name: ziti-identity
+      emptyDir: {}
+    - name: ziti-enrollment
       secret:
-        secretName: egress-gateway-ziti-identity
+        secretName: egress-gateway-enrollment
     - name: egress-ca
       secret:
         secretName: egress-ca

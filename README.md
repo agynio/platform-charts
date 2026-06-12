@@ -381,6 +381,7 @@ TRACING_ADDRESS
 AGENTS_SERVICE_ADDRESS
 ZITI_MANAGEMENT_ADDRESS
 ZITI_IDENTITY_FILE
+ZITI_ENROLLMENT_JWT_FILE
 EGRESS_CA_CERT_PATH
 EGRESS_CA_KEY_PATH
 ```
@@ -400,11 +401,11 @@ The Egress CA contract is fixed across deployment layers:
 - Egress Gateway mount path: `/var/run/agyn/egress-ca/`
 - Egress Gateway env vars: `EGRESS_CA_CERT_PATH` and `EGRESS_CA_KEY_PATH`
 
-The Egress Gateway Ziti identity is consumed from the
-`egress-gateway-ziti-identity` Secret and mounted at `/var/lib/ziti`. In
-bootstrap environments this Secret is created by the bootstrap platform stack;
-in external environments operators must provide an enrolled identity Secret with
-an `identity.json` key before enabling `egress-gateway`.
+The Egress Gateway Ziti identity self-enrolls at startup from the
+`egress-gateway-enrollment` Secret key `enrollmentJwt`, mounted at
+`/var/run/ziti/enrollment/enrollmentJwt`. The enrolled `identity.json` is
+written to the writable `/var/lib/ziti` volume configured by
+`ZITI_IDENTITY_FILE`.
 
 `gateway.gateway.egressRulesGrpcTarget` and `secrets.egressRules.grpcTarget`
 are both validated against `platform.serviceEndpoints.egress` so Gateway and

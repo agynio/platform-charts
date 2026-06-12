@@ -26,7 +26,7 @@ data:
   egress-target: {{ .Values.platform.serviceEndpoints.egress | quote }}
   groups-target: {{ .Values.platform.serviceEndpoints.groups | quote }}
   egress-ca-secret: "egress-ca"
-  egress-gateway-ziti-identity-secret: "egress-gateway-ziti-identity"
+  egress-gateway-enrollment-secret: "egress-gateway-enrollment"
   registration-note: >-
     App, runner, and service-token registration is outside this chart scope.
     Provide pre-created Kubernetes Secrets referenced by subchart values.
