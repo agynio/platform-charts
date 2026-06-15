@@ -352,6 +352,9 @@
             "groups": {
               "type": "string"
             },
+            "networks": {
+              "type": "string"
+            },
             "identity": {
               "type": "string"
             },
@@ -490,6 +493,25 @@
       }
     },
     "groups": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fullnameOverride": {
+          "type": "string"
+        },
+        "env": {
+          "type": "array"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "networks": {
       "type": "object",
       "additionalProperties": true,
       "properties": {

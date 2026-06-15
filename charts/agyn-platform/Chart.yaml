@@ -57,6 +57,10 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.0
     condition: groups.enabled
+  - name: networks
+    repository: file://charts/networks
+    version: 0.1.0
+    condition: networks.enabled
   - name: apps
     repository: oci://ghcr.io/agynio/charts
     version: 0.4.3
