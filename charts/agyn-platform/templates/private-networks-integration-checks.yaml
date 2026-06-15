@@ -1,0 +1,50 @@
+{{- $groupsTarget := .Values.platform.serviceEndpoints.groups -}}
+{{- $networksTarget := .Values.platform.serviceEndpoints.networks -}}
+{{- $authorizationTarget := .Values.platform.serviceEndpoints.authorization -}}
+{{- $identityTarget := .Values.platform.serviceEndpoints.identity -}}
+{{- $notificationsTarget := .Values.platform.serviceEndpoints.notifications -}}
+{{- $zitiManagementTarget := .Values.platform.serviceEndpoints.zitiManagement -}}
+{{- $natsURL := .Values.platform.eventBus.url -}}
+
+{{- if and .Values.gateway .Values.gateway.enabled -}}
+{{- $gatewayEnv := dict -}}
+{{- range $env := .Values.gateway.env | default list -}}
+{{- $_ := set $gatewayEnv $env.name $env -}}
+{{- end -}}
+{{- $groupsEnv := required "gateway.env must include GROUPS_GRPC_TARGET" (get $gatewayEnv "GROUPS_GRPC_TARGET") -}}
+{{- if ne $groupsEnv.value $groupsTarget -}}
+{{- fail (printf "gateway.env[GROUPS_GRPC_TARGET] must equal platform endpoint %s" $groupsTarget) -}}
+{{- end -}}
+{{- $networksEnv := required "gateway.env must include NETWORKS_GRPC_TARGET" (get $gatewayEnv "NETWORKS_GRPC_TARGET") -}}
+{{- if ne $networksEnv.value $networksTarget -}}
+{{- fail (printf "gateway.env[NETWORKS_GRPC_TARGET] must equal platform endpoint %s" $networksTarget) -}}
+{{- end -}}
+{{- end -}}
+
+{{- if and .Values.networks .Values.networks.enabled -}}
+{{- $networkEnv := dict -}}
+{{- range $env := .Values.networks.env | default list -}}
+{{- $_ := set $networkEnv $env.name $env -}}
+{{- end -}}
+{{- $requiredNetworkEnv := dict "AUTHORIZATION_GRPC_TARGET" $authorizationTarget "ZITI_MANAGEMENT_GRPC_TARGET" $zitiManagementTarget "IDENTITY_GRPC_TARGET" $identityTarget "GROUPS_GRPC_TARGET" $groupsTarget "NOTIFICATIONS_GRPC_TARGET" $notificationsTarget "NATS_URL" $natsURL -}}
+{{- range $name, $target := $requiredNetworkEnv -}}
+{{- $env := required (printf "networks.env must include %s" $name) (get $networkEnv $name) -}}
+{{- if ne $env.value $target -}}
+{{- fail (printf "networks.env[%s] must equal platform endpoint %s" $name $target) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- if and .Values.groups .Values.groups.enabled -}}
+{{- $groupEnv := dict -}}
+{{- range $env := .Values.groups.env | default list -}}
+{{- $_ := set $groupEnv $env.name $env -}}
+{{- end -}}
+{{- $requiredGroupEnv := dict "AUTHORIZATION_GRPC_TARGET" $authorizationTarget "IDENTITY_GRPC_TARGET" $identityTarget "NATS_URL" $natsURL -}}
+{{- range $name, $target := $requiredGroupEnv -}}
+{{- $env := required (printf "groups.env must include %s" $name) (get $groupEnv $name) -}}
+{{- if ne $env.value $target -}}
+{{- fail (printf "groups.env[%s] must equal platform endpoint %s" $name $target) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

@@ -18,6 +18,7 @@ platform:
     # from these endpoint anchors; render-time checks prevent override drift.
     authorization: &platformEndpointAuthorization "authorization:50051"
     groups: &platformEndpointGroups "groups:50051"
+    networks: &platformEndpointNetworks "networks:50051"
     identity: &platformEndpointIdentity "identity:50051"
     notifications: &platformEndpointNotifications "notifications:50051"
     secrets: &platformEndpointSecrets "secrets:50051"
@@ -45,6 +46,7 @@ postgres:
   databaseNames:
     egress: egress
     groups: groups
+    networks: networks
     agents: agents
     agentsOrchestrator: orchestrator
     apps: apps
@@ -252,10 +254,84 @@ groups:
       cpu: 500m
       memory: 256Mi
 
-gateway:
-  gateway:
-    egressRulesGrpcTarget: *platformEndpointEgress
-
 secrets:
   egressRules:
     grpcTarget: *platformEndpointEgress
+
+
+users:
+  env:
+    - name: ZITI_MANAGEMENT_ADDRESS
+      value: *platformEndpointZitiManagement
+    - name: GROUPS_ADDRESS
+      value: *platformEndpointGroups
+    - name: NATS_URL
+      value: *platformEndpointNats
+    - name: GROUP_SYNC_DURABLE
+      value: "users-group-sync"
+
+apps:
+  env:
+    - name: GROUPS_GRPC_TARGET
+      value: *platformEndpointGroups
+    - name: NATS_URL
+      value: *platformEndpointNats
+    - name: GROUP_SYNC_DURABLE
+      value: "apps-group-sync"
+
+agents-orchestrator:
+  env:
+    - name: GROUP_SYNC_ENABLED
+      value: "true"
+    - name: GROUPS_ADDRESS
+      value: *platformEndpointGroups
+    - name: NATS_URL
+      value: *platformEndpointNats
+
+networks:
+  enabled: false
+  fullnameOverride: networks
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: networks
+    - name: DEPENDENCY_CLIENTS_ENABLED
+      value: "true"
+    - name: AUTHORIZATION_GRPC_TARGET
+      value: *platformEndpointAuthorization
+    - name: ZITI_MANAGEMENT_GRPC_TARGET
+      value: *platformEndpointZitiManagement
+    - name: IDENTITY_GRPC_TARGET
+      value: *platformEndpointIdentity
+    - name: GROUPS_GRPC_TARGET
+      value: *platformEndpointGroups
+    - name: NOTIFICATIONS_GRPC_TARGET
+      value: *platformEndpointNotifications
+    - name: NATS_URL
+      value: *platformEndpointNats
+    - name: TUNNEL_LIVENESS_INTERVAL
+      value: "30s"
+    - name: RECONCILIATION_INTERVAL
+      value: "60s"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+gateway:
+  gateway:
+    egressRulesGrpcTarget: *platformEndpointEgress
+    groupsGrpcTarget: *platformEndpointGroups
+    networksGrpcTarget: *platformEndpointNetworks
+  env:
+    - name: GROUPS_GRPC_TARGET
+      value: *platformEndpointGroups
+    - name: NETWORKS_GRPC_TARGET
+      value: *platformEndpointNetworks
