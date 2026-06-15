@@ -330,8 +330,3 @@ gateway:
     egressRulesGrpcTarget: *platformEndpointEgress
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
-  env:
-    - name: GROUPS_GRPC_TARGET
-      value: *platformEndpointGroups
-    - name: NETWORKS_GRPC_TARGET
-      value: *platformEndpointNetworks

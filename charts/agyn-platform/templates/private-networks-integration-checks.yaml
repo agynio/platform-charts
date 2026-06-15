@@ -7,17 +7,12 @@
 {{- $natsURL := .Values.platform.eventBus.url -}}
 
 {{- if and .Values.gateway .Values.gateway.enabled -}}
-{{- $gatewayEnv := dict -}}
-{{- range $env := .Values.gateway.env | default list -}}
-{{- $_ := set $gatewayEnv $env.name $env -}}
+{{- $gatewayValues := required "gateway.gateway values are required" .Values.gateway.gateway -}}
+{{- if ne $gatewayValues.groupsGrpcTarget $groupsTarget -}}
+{{- fail (printf "gateway.gateway.groupsGrpcTarget must equal platform endpoint %s" $groupsTarget) -}}
 {{- end -}}
-{{- $groupsEnv := required "gateway.env must include GROUPS_GRPC_TARGET" (get $gatewayEnv "GROUPS_GRPC_TARGET") -}}
-{{- if ne $groupsEnv.value $groupsTarget -}}
-{{- fail (printf "gateway.env[GROUPS_GRPC_TARGET] must equal platform endpoint %s" $groupsTarget) -}}
-{{- end -}}
-{{- $networksEnv := required "gateway.env must include NETWORKS_GRPC_TARGET" (get $gatewayEnv "NETWORKS_GRPC_TARGET") -}}
-{{- if ne $networksEnv.value $networksTarget -}}
-{{- fail (printf "gateway.env[NETWORKS_GRPC_TARGET] must equal platform endpoint %s" $networksTarget) -}}
+{{- if ne $gatewayValues.networksGrpcTarget $networksTarget -}}
+{{- fail (printf "gateway.gateway.networksGrpcTarget must equal platform endpoint %s" $networksTarget) -}}
 {{- end -}}
 {{- end -}}
 
