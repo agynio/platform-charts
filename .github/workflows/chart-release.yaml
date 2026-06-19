@@ -55,6 +55,10 @@ jobs:
 
       - name: Push charts
         run: |
-          for chart in .dist/*.tgz; do
+          for chart in .dist/agyn-*.tgz; do
             helm push "$chart" "oci://$CHART_REPOSITORY"
           done
+
+      - name: Push groups chart
+        run: |
+          helm push .dist/groups-*.tgz oci://ghcr.io/agynio/charts-public
