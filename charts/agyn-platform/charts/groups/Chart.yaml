@@ -1,0 +1,13 @@
+apiVersion: v2
+name: groups
+description: Helm chart for deploying the GroupsService gRPC server.
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+home: https://github.com/agynio/groups
+sources:
+  - https://github.com/agynio/groups
+dependencies:
+  - name: service-base
+    version: ">=0.1.4 <1.0.0"
+    repository: oci://ghcr.io/agynio/charts
