@@ -261,6 +261,14 @@ secrets:
 
 users:
   env:
+    # Setting env here replaces the subchart's default list, which includes
+    # DATABASE_URL — so it must be re-declared or the pod comes up without a
+    # database URL and crashloops.
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: users
     - name: ZITI_MANAGEMENT_ADDRESS
       value: *platformEndpointZitiManagement
     - name: GROUPS_ADDRESS
@@ -272,6 +280,14 @@ users:
 
 apps:
   env:
+    # Setting env here replaces the subchart's default list, which includes
+    # DATABASE_URL — so it must be re-declared or the pod comes up without a
+    # database URL and crashloops.
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: apps
     - name: GROUPS_GRPC_TARGET
       value: *platformEndpointGroups
     - name: NATS_URL
