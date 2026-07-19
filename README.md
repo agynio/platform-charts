@@ -408,11 +408,12 @@ ZITI_IDENTITY_FILE
 
 The Terminal Proxy ticket signing key is consumed from the
 `terminal-proxy-ticket-signing` Secret key `signing-key`. The Terminal Proxy
-Ziti identity is consumed from the `terminal-proxy-ziti-identity` Secret and
-mounted at `/var/run/agyn/terminal-proxy-ziti`; the Secret must contain an
-`identity.json` key. In bootstrap environments these Secrets are created by the
-bootstrap platform stack; in external environments operators must provide them
-before enabling `terminal-proxy`.
+Ziti enrollment JWT is consumed from the `terminal-proxy-enrollment` Secret key
+`enrollmentJwt`. An init container enrolls that JWT into
+`/var/run/agyn/terminal-proxy-ziti/identity.json` on an `emptyDir` volume before
+the Terminal Proxy container starts. In bootstrap environments these Secrets are
+created by the bootstrap platform stack; in external environments operators must
+provide them before enabling `terminal-proxy`.
 
 When Terminal Proxy is enabled, `agyn-platform` renders the Runners
 `runners-internal` AuthorizationPolicy directly and disables the upstream

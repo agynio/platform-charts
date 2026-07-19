@@ -327,6 +327,28 @@ agents-orchestrator:
 terminal-proxy:
   enabled: true
   fullnameOverride: terminal-proxy
+  podSecurityContext:
+    enabled: true
+    fsGroup: 10001
+  initContainers:
+    - name: enroll-ziti-identity
+      image: openziti/ziti-cli:2.0.0-pre10
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -ec
+      args:
+        - |
+          ziti edge enroll \
+            --jwt /etc/ziti-enrollment/enrollmentJwt \
+            --out /var/run/agyn/terminal-proxy-ziti/identity.json
+          chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json
+      volumeMounts:
+        - name: ziti-enrollment
+          mountPath: /etc/ziti-enrollment
+          readOnly: true
+        - name: ziti-identity
+          mountPath: /var/run/agyn/terminal-proxy-ziti
   env:
     - name: HTTP_ADDRESS
       value: ":8080"
@@ -374,8 +396,10 @@ terminal-proxy:
       readOnly: true
   extraVolumes:
     - name: ziti-identity
+      emptyDir: {}
+    - name: ziti-enrollment
       secret:
-        secretName: terminal-proxy-ziti-identity
+        secretName: terminal-proxy-enrollment
   resources:
     requests:
       cpu: 50m

@@ -2,6 +2,10 @@
 {{- $terminalWebSocketURL := required "platform.externalUrls.terminalProxyWebSocket is required" .Values.platform.externalUrls.terminalProxyWebSocket -}}
 {{- $terminalValues := index .Values "terminal-proxy" -}}
 {{- if $terminalValues.enabled -}}
+{{- $podSecurityContext := $terminalValues.podSecurityContext | default dict -}}
+{{- if ne (int $podSecurityContext.fsGroup) 10001 -}}
+{{- fail "terminal-proxy podSecurityContext.fsGroup must equal 10001 so the runtime container can read the enrolled identity" -}}
+{{- end -}}
 {{- $terminalEnv := dict -}}
 {{- range $env := $terminalValues.env | default list -}}
 {{- $_ := set $terminalEnv $env.name $env -}}
@@ -41,13 +45,41 @@
 {{- if ne $zitiMount.mountPath "/var/run/agyn/terminal-proxy-ziti" -}}
 {{- fail "terminal-proxy ziti-identity mountPath must equal /var/run/agyn/terminal-proxy-ziti" -}}
 {{- end -}}
+{{- if not $zitiMount.readOnly -}}
+{{- fail "terminal-proxy ziti-identity runtime mount must be readOnly" -}}
+{{- end -}}
 {{- $volumes := dict -}}
 {{- range $volume := $terminalValues.extraVolumes | default list -}}
 {{- $_ := set $volumes $volume.name $volume -}}
 {{- end -}}
 {{- $zitiVolume := required "terminal-proxy.extraVolumes must include ziti-identity" (get $volumes "ziti-identity") -}}
-{{- if ne $zitiVolume.secret.secretName "terminal-proxy-ziti-identity" -}}
-{{- fail "terminal-proxy ziti-identity volume secretName must equal terminal-proxy-ziti-identity" -}}
+{{- if not (hasKey $zitiVolume "emptyDir") -}}
+{{- fail "terminal-proxy ziti-identity volume must be an emptyDir populated by the enrollment initContainer" -}}
+{{- end -}}
+{{- $zitiEnrollmentVolume := required "terminal-proxy.extraVolumes must include ziti-enrollment" (get $volumes "ziti-enrollment") -}}
+{{- if ne $zitiEnrollmentVolume.secret.secretName "terminal-proxy-enrollment" -}}
+{{- fail "terminal-proxy ziti-enrollment volume secretName must equal terminal-proxy-enrollment" -}}
+{{- end -}}
+{{- $initContainers := dict -}}
+{{- range $container := $terminalValues.initContainers | default list -}}
+{{- $_ := set $initContainers $container.name $container -}}
+{{- end -}}
+{{- $enrollInit := required "terminal-proxy.initContainers must include enroll-ziti-identity" (get $initContainers "enroll-ziti-identity") -}}
+{{- $initMounts := dict -}}
+{{- range $mount := $enrollInit.volumeMounts | default list -}}
+{{- $_ := set $initMounts $mount.name $mount -}}
+{{- end -}}
+{{- $initEnrollmentMount := required "terminal-proxy enroll-ziti-identity initContainer must mount ziti-enrollment" (get $initMounts "ziti-enrollment") -}}
+{{- if ne $initEnrollmentMount.mountPath "/etc/ziti-enrollment" -}}
+{{- fail "terminal-proxy ziti-enrollment mountPath must equal /etc/ziti-enrollment" -}}
+{{- end -}}
+{{- $initIdentityMount := required "terminal-proxy enroll-ziti-identity initContainer must mount ziti-identity" (get $initMounts "ziti-identity") -}}
+{{- if ne $initIdentityMount.mountPath "/var/run/agyn/terminal-proxy-ziti" -}}
+{{- fail "terminal-proxy enroll-ziti-identity ziti-identity mountPath must equal /var/run/agyn/terminal-proxy-ziti" -}}
+{{- end -}}
+{{- $initArgs := join "\n" ($enrollInit.args | default list) -}}
+{{- if or (not (contains "ziti edge enroll" $initArgs)) (not (contains "--jwt /etc/ziti-enrollment/enrollmentJwt" $initArgs)) (not (contains "--out /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs)) -}}
+{{- fail "terminal-proxy enroll-ziti-identity initContainer must enroll terminal-proxy identity.json from terminal-proxy-enrollment/enrollmentJwt" -}}
 {{- end -}}
 {{- $runnersValues := .Values.runners | default dict -}}
 {{- $runnersPolicy := .Values.platform.runnersAuthorizationPolicy | default dict -}}
