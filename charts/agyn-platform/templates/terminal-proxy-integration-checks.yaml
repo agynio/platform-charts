@@ -1,0 +1,65 @@
+{{- $terminalProxyTarget := required "platform.serviceEndpoints.terminalProxy is required" .Values.platform.serviceEndpoints.terminalProxy -}}
+{{- $terminalWebSocketURL := required "platform.externalUrls.terminalProxyWebSocket is required" .Values.platform.externalUrls.terminalProxyWebSocket -}}
+{{- $terminalValues := index .Values "terminal-proxy" -}}
+{{- if $terminalValues.enabled -}}
+{{- $terminalEnv := dict -}}
+{{- range $env := $terminalValues.env | default list -}}
+{{- $_ := set $terminalEnv $env.name $env -}}
+{{- end -}}
+{{- $requiredTerminalEnv := dict "HTTP_ADDRESS" ":8080" "GRPC_ADDRESS" ":50051" "TERMINAL_PROXY_WEBSOCKET_URL" $terminalWebSocketURL "RUNNERS_ADDRESS" .Values.platform.serviceEndpoints.runners "AGENTS_ADDRESS" .Values.platform.serviceEndpoints.agents "AUTHORIZATION_ADDRESS" .Values.platform.serviceEndpoints.authorization "ZITI_ENABLED" "true" "ZITI_IDENTITY_FILE" "/var/run/agyn/terminal-proxy-ziti/identity.json" -}}
+{{- range $name, $value := $requiredTerminalEnv -}}
+{{- $env := required (printf "terminal-proxy.env must include %s" $name) (get $terminalEnv $name) -}}
+{{- if ne $env.value $value -}}
+{{- fail (printf "terminal-proxy.env[%s] must equal %s" $name $value) -}}
+{{- end -}}
+{{- end -}}
+{{- $signingEnv := required "terminal-proxy.env must include TERMINAL_PROXY_TICKET_SIGNING_KEY" (get $terminalEnv "TERMINAL_PROXY_TICKET_SIGNING_KEY") -}}
+{{- $signingSecretRef := required "terminal-proxy TERMINAL_PROXY_TICKET_SIGNING_KEY must use valueFrom.secretKeyRef" $signingEnv.valueFrom.secretKeyRef -}}
+{{- if ne $signingSecretRef.name "terminal-proxy-ticket-signing" -}}
+{{- fail "terminal-proxy ticket signing secret name must equal terminal-proxy-ticket-signing" -}}
+{{- end -}}
+{{- if ne $signingSecretRef.key "signing-key" -}}
+{{- fail "terminal-proxy ticket signing secret key must equal signing-key" -}}
+{{- end -}}
+{{- $ports := dict -}}
+{{- range $port := $terminalValues.service.ports | default list -}}
+{{- $_ := set $ports $port.name $port -}}
+{{- end -}}
+{{- $httpPort := required "terminal-proxy.service.ports must include http" (get $ports "http") -}}
+{{- if or (ne (int $httpPort.port) 8080) (ne $httpPort.targetPort "http") -}}
+{{- fail "terminal-proxy service http port must expose 8080 -> http" -}}
+{{- end -}}
+{{- $grpcPort := required "terminal-proxy.service.ports must include grpc" (get $ports "grpc") -}}
+{{- if or (ne (int $grpcPort.port) 50051) (ne $grpcPort.targetPort "grpc") -}}
+{{- fail "terminal-proxy service grpc port must expose 50051 -> grpc" -}}
+{{- end -}}
+{{- $mounts := dict -}}
+{{- range $mount := $terminalValues.extraVolumeMounts | default list -}}
+{{- $_ := set $mounts $mount.name $mount -}}
+{{- end -}}
+{{- $zitiMount := required "terminal-proxy.extraVolumeMounts must include ziti-identity" (get $mounts "ziti-identity") -}}
+{{- if ne $zitiMount.mountPath "/var/run/agyn/terminal-proxy-ziti" -}}
+{{- fail "terminal-proxy ziti-identity mountPath must equal /var/run/agyn/terminal-proxy-ziti" -}}
+{{- end -}}
+{{- $volumes := dict -}}
+{{- range $volume := $terminalValues.extraVolumes | default list -}}
+{{- $_ := set $volumes $volume.name $volume -}}
+{{- end -}}
+{{- $zitiVolume := required "terminal-proxy.extraVolumes must include ziti-identity" (get $volumes "ziti-identity") -}}
+{{- if ne $zitiVolume.secret.secretName "terminal-proxy-ziti-identity" -}}
+{{- fail "terminal-proxy ziti-identity volume secretName must equal terminal-proxy-ziti-identity" -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.gateway .Values.gateway.enabled .Values.gateway.gateway -}}
+{{- if ne .Values.gateway.gateway.terminalProxyGrpcTarget $terminalProxyTarget -}}
+{{- fail (printf "gateway.gateway.terminalProxyGrpcTarget must equal platform.serviceEndpoints.terminalProxy (%s)" $terminalProxyTarget) -}}
+{{- end -}}
+{{- $gatewayEnv := dict -}}
+{{- range $env := .Values.gateway.env | default list -}}
+{{- $_ := set $gatewayEnv $env.name $env -}}
+{{- end -}}
+{{- $gatewayTerminalEnv := required "gateway.env must include TERMINAL_PROXY_GRPC_TARGET until the Gateway chart exposes gateway.terminalProxyGrpcTarget" (get $gatewayEnv "TERMINAL_PROXY_GRPC_TARGET") -}}
+{{- if ne $gatewayTerminalEnv.value $terminalProxyTarget -}}
+{{- fail (printf "gateway.env[TERMINAL_PROXY_GRPC_TARGET] must equal platform.serviceEndpoints.terminalProxy (%s)" $terminalProxyTarget) -}}
+{{- end -}}
+{{- end -}}

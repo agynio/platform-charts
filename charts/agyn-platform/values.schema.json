@@ -346,6 +346,9 @@
             "egress": {
               "type": "string"
             },
+            "terminalProxy": {
+              "type": "string"
+            },
             "authorization": {
               "type": "string"
             },
@@ -389,6 +392,15 @@
               "type": "string"
             },
             "urlEnvName": {
+              "type": "string"
+            }
+          }
+        },
+        "externalUrls": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "terminalProxyWebSocket": {
               "type": "string"
             }
           }

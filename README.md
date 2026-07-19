@@ -385,6 +385,34 @@ EGRESS_CA_CERT_PATH
 EGRESS_CA_KEY_PATH
 ```
 
+Terminal Proxy-specific dependency overrides are also validated against the
+top-level service endpoint contract. The chart wires Gateway to
+`platform.serviceEndpoints.terminalProxy` through
+`gateway.env[TERMINAL_PROXY_GRPC_TARGET]` until the published Gateway chart has
+a native `gateway.terminalProxyGrpcTarget` value.
+
+Required Terminal Proxy env vars are wired by default:
+
+```text
+HTTP_ADDRESS
+GRPC_ADDRESS
+TERMINAL_PROXY_WEBSOCKET_URL
+TERMINAL_PROXY_TICKET_SIGNING_KEY
+RUNNERS_ADDRESS
+AGENTS_ADDRESS
+AUTHORIZATION_ADDRESS
+ZITI_ENABLED
+ZITI_IDENTITY_FILE
+```
+
+The Terminal Proxy ticket signing key is consumed from the
+`terminal-proxy-ticket-signing` Secret key `signing-key`. The Terminal Proxy
+Ziti identity is consumed from the `terminal-proxy-ziti-identity` Secret and
+mounted at `/var/run/agyn/terminal-proxy-ziti`; the Secret must contain an
+`identity.json` key. In bootstrap environments these Secrets are created by the
+bootstrap platform stack; in external environments operators must provide them
+before enabling `terminal-proxy`.
+
 ## Egress deployment contract
 
 `agyn-platform` deploys the Egress control-plane service (`egress`) and the
