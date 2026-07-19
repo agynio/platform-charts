@@ -405,6 +405,25 @@
             }
           }
         },
+        "runnersAuthorizationPolicy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "orchestratorServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "identityServiceAccounts": {
+              "type": "array"
+            },
+            "internalServiceAccounts": {
+              "type": "array"
+            }
+          }
+        },
         "database": {
           "type": "object",
           "additionalProperties": true,

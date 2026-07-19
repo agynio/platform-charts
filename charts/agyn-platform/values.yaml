@@ -31,6 +31,23 @@ platform:
     nats: &platformEndpointNats "nats://nats:4222"
   externalUrls:
     terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.example.com/terminal"
+  runnersAuthorizationPolicy:
+    enabled: true
+    orchestratorServiceAccount:
+      name: agents-orchestrator
+      namespace: ""
+    identityServiceAccounts:
+      - name: gateway
+        namespace: ""
+      - name: expose
+        namespace: ""
+      - name: notifications
+        namespace: ""
+      - name: chat
+        namespace: ""
+    internalServiceAccounts:
+      - name: terminal-proxy
+        namespace: ""
   eventBus:
     url: *platformEndpointNats
     urlEnvName: NATS_URL
@@ -366,6 +383,10 @@ terminal-proxy:
     limits:
       cpu: 500m
       memory: 256Mi
+
+runners:
+  authorizationPolicy:
+    enabled: false
 
 networks:
   enabled: false

@@ -49,6 +49,25 @@
 {{- if ne $zitiVolume.secret.secretName "terminal-proxy-ziti-identity" -}}
 {{- fail "terminal-proxy ziti-identity volume secretName must equal terminal-proxy-ziti-identity" -}}
 {{- end -}}
+{{- $runnersValues := .Values.runners | default dict -}}
+{{- $runnersPolicy := .Values.platform.runnersAuthorizationPolicy | default dict -}}
+{{- if not $runnersPolicy.enabled -}}
+{{- fail "platform.runnersAuthorizationPolicy.enabled must be true when terminal-proxy is enabled" -}}
+{{- end -}}
+{{- if and $runnersValues.authorizationPolicy $runnersValues.authorizationPolicy.enabled -}}
+{{- fail "runners.authorizationPolicy.enabled must be false so agyn-platform can render Terminal Proxy-aware runners policy" -}}
+{{- end -}}
+{{- $terminalProxyPrincipal := printf "cluster.local/ns/%s/sa/terminal-proxy" .Release.Namespace -}}
+{{- $internalPrincipalFound := false -}}
+{{- range $serviceAccount := $runnersPolicy.internalServiceAccounts | default list -}}
+{{- $namespace := $serviceAccount.namespace | default $.Release.Namespace -}}
+{{- if eq (printf "cluster.local/ns/%s/sa/%s" $namespace $serviceAccount.name) $terminalProxyPrincipal -}}
+{{- $internalPrincipalFound = true -}}
+{{- end -}}
+{{- end -}}
+{{- if not $internalPrincipalFound -}}
+{{- fail (printf "platform.runnersAuthorizationPolicy.internalServiceAccounts must include terminal-proxy service account principal %s" $terminalProxyPrincipal) -}}
+{{- end -}}
 {{- end -}}
 {{- if and .Values.gateway .Values.gateway.enabled .Values.gateway.gateway -}}
 {{- if ne .Values.gateway.gateway.terminalProxyGrpcTarget $terminalProxyTarget -}}

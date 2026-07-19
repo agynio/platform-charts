@@ -413,6 +413,13 @@ mounted at `/var/run/agyn/terminal-proxy-ziti`; the Secret must contain an
 bootstrap platform stack; in external environments operators must provide them
 before enabling `terminal-proxy`.
 
+When Terminal Proxy is enabled, `agyn-platform` renders the Runners
+`runners-internal` AuthorizationPolicy directly and disables the upstream
+Runners chart policy. This keeps the existing caller-scoped Runners methods
+behind `x-identity-id`, while allowing the `terminal-proxy` service account to
+call only the internal unscoped Runners methods it needs:
+`ListWorkloads` and `TouchWorkload`.
+
 ## Egress deployment contract
 
 `agyn-platform` deploys the Egress control-plane service (`egress`) and the
