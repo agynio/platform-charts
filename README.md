@@ -98,6 +98,7 @@ helm dependency update charts/agyn-apps
 helm lint charts/agyn-platform charts/agyn-apps
 helm template agyn-platform charts/agyn-platform >/tmp/agyn-platform.yaml
 helm template agyn-apps charts/agyn-apps >/tmp/agyn-apps.yaml
+scripts/check-terminal-proxy-runners-policy.sh
 helm package charts/agyn-platform --destination .dist
 helm package charts/agyn-apps --destination .dist
 yamllint .
