@@ -4,6 +4,8 @@ extends: default
 ignore: |
   charts/*/templates/*.yaml
   charts/*/templates/*.tpl
+  charts/*/charts/*/templates/*.yaml
+  charts/*/charts/*/templates/*.tpl
 
 rules:
   document-start: disable

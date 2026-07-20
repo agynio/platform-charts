@@ -16,6 +16,7 @@ platform:
     egress: &platformEndpointEgress "egress:50051"
     # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
     # from these endpoint anchors; render-time checks prevent override drift.
+    terminalProxy: &platformEndpointTerminalProxy "terminal-proxy:50051"
     authorization: &platformEndpointAuthorization "authorization:50051"
     groups: &platformEndpointGroups "groups:50051"
     networks: &platformEndpointNetworks "networks:50051"
@@ -25,9 +26,28 @@ platform:
     metering: &platformEndpointMetering "metering:50051"
     tracing: &platformEndpointTracing "tracing:50051"
     agents: &platformEndpointAgents "agents:50051"
-    runners: runners:50051
+    runners: &platformEndpointRunners "runners:50051"
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
     nats: &platformEndpointNats "nats://nats:4222"
+  externalUrls:
+    terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.example.com/terminal"
+  runnersAuthorizationPolicy:
+    enabled: true
+    orchestratorServiceAccount:
+      name: agents-orchestrator
+      namespace: ""
+    identityServiceAccounts:
+      - name: gateway
+        namespace: ""
+      - name: expose
+        namespace: ""
+      - name: notifications
+        namespace: ""
+      - name: chat
+        namespace: ""
+    internalServiceAccounts:
+      - name: terminal-proxy
+        namespace: ""
   eventBus:
     url: *platformEndpointNats
     urlEnvName: NATS_URL
@@ -304,6 +324,95 @@ agents-orchestrator:
     - name: NATS_URL
       value: *platformEndpointNats
 
+terminal-proxy:
+  enabled: true
+  fullnameOverride: terminal-proxy
+  podSecurityContext:
+    enabled: true
+    fsGroup: 10001
+  initContainers:
+    - name: enroll-ziti-identity
+      image: openziti/ziti-cli:2.0.0-pre10
+      imagePullPolicy: IfNotPresent
+      command:
+        - /bin/sh
+        - -ec
+      args:
+        - |
+          ziti edge enroll \
+            --jwt /etc/ziti-enrollment/enrollmentJwt \
+            --out /var/run/agyn/terminal-proxy-ziti/identity.json
+          chown 10001:10001 /var/run/agyn/terminal-proxy-ziti/identity.json
+          chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json
+      volumeMounts:
+        - name: ziti-enrollment
+          mountPath: /etc/ziti-enrollment
+          readOnly: true
+        - name: ziti-identity
+          mountPath: /var/run/agyn/terminal-proxy-ziti
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: TERMINAL_PROXY_WEBSOCKET_URL
+      value: *platformTerminalProxyWebSocketURL
+    - name: TERMINAL_PROXY_TICKET_SIGNING_KEY
+      valueFrom:
+        secretKeyRef:
+          name: terminal-proxy-ticket-signing
+          key: signing-key
+    - name: RUNNERS_ADDRESS
+      value: *platformEndpointRunners
+    - name: AGENTS_ADDRESS
+      value: *platformEndpointAgents
+    - name: AUTHORIZATION_ADDRESS
+      value: *platformEndpointAuthorization
+    - name: ZITI_ENABLED
+      value: "true"
+    - name: ZITI_IDENTITY_FILE
+      value: "/var/run/agyn/terminal-proxy-ziti/identity.json"
+  service:
+    enabled: true
+    type: ClusterIP
+    ports:
+      - name: http
+        port: 8080
+        targetPort: http
+        protocol: TCP
+      - name: grpc
+        port: 50051
+        targetPort: grpc
+        protocol: TCP
+  containerPorts:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+    - name: grpc
+      containerPort: 50051
+      protocol: TCP
+  extraVolumeMounts:
+    - name: ziti-identity
+      mountPath: /var/run/agyn/terminal-proxy-ziti
+      readOnly: true
+  extraVolumes:
+    - name: ziti-identity
+      emptyDir: {}
+    - name: ziti-enrollment
+      secret:
+        secretName: terminal-proxy-enrollment
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+runners:
+  authorizationPolicy:
+    enabled: false
+
 networks:
   enabled: false
   fullnameOverride: networks
@@ -342,7 +451,11 @@ networks:
       memory: 256Mi
 
 gateway:
+  env:
+    - name: TERMINAL_PROXY_GRPC_TARGET
+      value: *platformEndpointTerminalProxy
   gateway:
     egressRulesGrpcTarget: *platformEndpointEgress
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
+    terminalProxyGrpcTarget: *platformEndpointTerminalProxy

@@ -1,0 +1,71 @@
+{{- if .Values.platform.runnersAuthorizationPolicy.enabled }}
+{{- $policy := .Values.platform.runnersAuthorizationPolicy -}}
+{{- $orchestrator := required "platform.runnersAuthorizationPolicy.orchestratorServiceAccount is required" $policy.orchestratorServiceAccount -}}
+{{- $orchestratorPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $orchestrator) -}}
+{{- $identityPrincipals := list $orchestratorPrincipal -}}
+{{- range $policy.identityServiceAccounts | default list -}}
+{{- $identityPrincipals = append $identityPrincipals (include "agyn-platform.principal" (merge (dict "Release" $.Release) .)) -}}
+{{- end -}}
+{{- $internalPrincipals := list $orchestratorPrincipal -}}
+{{- range $policy.internalServiceAccounts | default list -}}
+{{- $internalPrincipals = append $internalPrincipals (include "agyn-platform.principal" (merge (dict "Release" $.Release) .)) -}}
+{{- end -}}
+{{- $callerPaths := list "/agynio.api.runners.v1.RunnersService/RegisterRunner" "/agynio.api.runners.v1.RunnersService/GetRunner" "/agynio.api.runners.v1.RunnersService/ListRunners" "/agynio.api.runners.v1.RunnersService/UpdateRunner" "/agynio.api.runners.v1.RunnersService/DeleteRunner" "/agynio.api.runners.v1.RunnersService/GetWorkload" "/agynio.api.runners.v1.RunnersService/ListWorkloadsByThread" "/agynio.api.runners.v1.RunnersService/StreamWorkloadLogs" "/agynio.api.runners.v1.RunnersService/GetVolume" "/agynio.api.runners.v1.RunnersService/ListVolumes" "/agynio.api.runners.v1.RunnersService/ListVolumesByThread" -}}
+{{- $internalPaths := list "/agynio.api.runners.v1.RunnersService/ListWorkloads" "/agynio.api.runners.v1.RunnersService/TouchWorkload" -}}
+{{- $orchestratorPaths := list "/agynio.api.runners.v1.RunnersService/CreateWorkload" "/agynio.api.runners.v1.RunnersService/UpdateWorkload" "/agynio.api.runners.v1.RunnersService/UpdateWorkloadStatus" "/agynio.api.runners.v1.RunnersService/DeleteWorkload" "/agynio.api.runners.v1.RunnersService/BatchUpdateWorkloadSampledAt" "/agynio.api.runners.v1.RunnersService/CreateVolume" "/agynio.api.runners.v1.RunnersService/UpdateVolume" "/agynio.api.runners.v1.RunnersService/BatchUpdateVolumeSampledAt" -}}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: runners-internal
+  labels:
+    app.kubernetes.io/name: runners
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runners
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  action: DENY
+  rules:
+    - from:
+        - source:
+            notPrincipals:
+              - {{ $orchestratorPrincipal | quote }}
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $orchestratorPaths }}
+    - from:
+        - source:
+            notPrincipals:
+{{- range $identityPrincipals }}
+              - {{ . | quote }}
+{{- end }}
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $callerPaths }}
+    - from:
+        - source:
+            notPrincipals:
+{{- range $internalPrincipals }}
+              - {{ . | quote }}
+{{- end }}
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $internalPaths }}
+    - from:
+        - source:
+            notPrincipals:
+              - {{ $orchestratorPrincipal | quote }}
+      when:
+        - key: request.headers[x-identity-id]
+          notValues:
+            - "*"
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $callerPaths }}
+{{- end }}
