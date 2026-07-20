@@ -81,6 +81,12 @@
 {{- if or (not (contains "ziti edge enroll" $initArgs)) (not (contains "--jwt /etc/ziti-enrollment/enrollmentJwt" $initArgs)) (not (contains "--out /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs)) -}}
 {{- fail "terminal-proxy enroll-ziti-identity initContainer must enroll terminal-proxy identity.json from terminal-proxy-enrollment/enrollmentJwt" -}}
 {{- end -}}
+{{- if not (contains "chown 10001:10001 /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs) -}}
+{{- fail "terminal-proxy enroll-ziti-identity initContainer must chown identity.json to runtime UID 10001" -}}
+{{- end -}}
+{{- if not (contains "chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs) -}}
+{{- fail "terminal-proxy enroll-ziti-identity initContainer must keep identity.json owner-readable only after chown" -}}
+{{- end -}}
 {{- $runnersValues := .Values.runners | default dict -}}
 {{- $runnersPolicy := .Values.platform.runnersAuthorizationPolicy | default dict -}}
 {{- if not $runnersPolicy.enabled -}}
