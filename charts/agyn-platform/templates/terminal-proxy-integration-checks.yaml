@@ -53,16 +53,30 @@
 {{- $_ := set $volumes $volume.name $volume -}}
 {{- end -}}
 {{- $zitiVolume := required "terminal-proxy.extraVolumes must include ziti-identity" (get $volumes "ziti-identity") -}}
-{{- if not (hasKey $zitiVolume "emptyDir") -}}
-{{- fail "terminal-proxy ziti-identity volume must be an emptyDir populated by the enrollment initContainer" -}}
+{{- $stableIdentityMode := false -}}
+{{- if hasKey $zitiVolume "secret" -}}
+{{- if ne $zitiVolume.secret.secretName "terminal-proxy-ziti-identity" -}}
+{{- fail "terminal-proxy ziti-identity secretName must equal terminal-proxy-ziti-identity" -}}
 {{- end -}}
-{{- $zitiEnrollmentVolume := required "terminal-proxy.extraVolumes must include ziti-enrollment" (get $volumes "ziti-enrollment") -}}
-{{- if ne $zitiEnrollmentVolume.secret.secretName "terminal-proxy-enrollment" -}}
-{{- fail "terminal-proxy ziti-enrollment volume secretName must equal terminal-proxy-enrollment" -}}
+{{- $stableIdentityMode = true -}}
+{{- else if not (hasKey $zitiVolume "emptyDir") -}}
+{{- fail "terminal-proxy ziti-identity volume must be a stable Secret or an emptyDir populated by the enrollment initContainer" -}}
 {{- end -}}
 {{- $initContainers := dict -}}
 {{- range $container := $terminalValues.initContainers | default list -}}
 {{- $_ := set $initContainers $container.name $container -}}
+{{- end -}}
+{{- if $stableIdentityMode -}}
+{{- if hasKey $volumes "ziti-enrollment" -}}
+{{- fail "terminal-proxy stable identity mode must not include ziti-enrollment volume" -}}
+{{- end -}}
+{{- if hasKey $initContainers "enroll-ziti-identity" -}}
+{{- fail "terminal-proxy stable identity mode must not include enroll-ziti-identity initContainer" -}}
+{{- end -}}
+{{- else -}}
+{{- $zitiEnrollmentVolume := required "terminal-proxy.extraVolumes must include ziti-enrollment" (get $volumes "ziti-enrollment") -}}
+{{- if ne $zitiEnrollmentVolume.secret.secretName "terminal-proxy-enrollment" -}}
+{{- fail "terminal-proxy ziti-enrollment volume secretName must equal terminal-proxy-enrollment" -}}
 {{- end -}}
 {{- $enrollInit := required "terminal-proxy.initContainers must include enroll-ziti-identity" (get $initContainers "enroll-ziti-identity") -}}
 {{- $initMounts := dict -}}
@@ -86,6 +100,7 @@
 {{- end -}}
 {{- if not (contains "chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs) -}}
 {{- fail "terminal-proxy enroll-ziti-identity initContainer must keep identity.json owner-readable only after chown" -}}
+{{- end -}}
 {{- end -}}
 {{- $runnersValues := .Values.runners | default dict -}}
 {{- $runnersPolicy := .Values.platform.runnersAuthorizationPolicy | default dict -}}
