@@ -5,6 +5,9 @@ global:
 validation:
   requireExistingSecrets: false
 
+contractConfigMaps:
+  enabled: true
+
 platform:
   database:
     mode: external
