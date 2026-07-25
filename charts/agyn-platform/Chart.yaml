@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.5.10
+version: 0.5.11
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -89,6 +89,12 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.12.6
     condition: llm-proxy.enabled
+  # Vendored until terminal-proxy publishes its first chart release, the same
+  # way groups and networks are carried.
+  - name: terminal-proxy
+    repository: file://charts/terminal-proxy
+    version: 0.1.0
+    condition: terminal-proxy.enabled
   - name: token-counting
     repository: oci://ghcr.io/agynio/charts
     version: 0.3.3

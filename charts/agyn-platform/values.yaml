@@ -25,7 +25,7 @@ platform:
     metering: &platformEndpointMetering "metering:50051"
     tracing: &platformEndpointTracing "tracing:50051"
     agents: &platformEndpointAgents "agents:50051"
-    runners: runners:50051
+    runners: &platformEndpointRunners "runners:50051"
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
     nats: &platformEndpointNats "nats://nats:4222"
   eventBus:
@@ -346,3 +346,23 @@ gateway:
     egressRulesGrpcTarget: *platformEndpointEgress
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
+
+terminal-proxy:
+  enabled: false
+  fullnameOverride: terminal-proxy
+  terminalProxy:
+    runnersAddress: *platformEndpointRunners
+    agentsAddress: *platformEndpointAgents
+    authorizationAddress: *platformEndpointAuthorization
+    # Public WebSocket endpoint handed to clients when a ticket is issued.
+    # Must match the ingress host that routes to this service.
+    websocketUrl: ""
+    ziti:
+      enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
