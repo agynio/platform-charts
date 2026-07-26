@@ -78,10 +78,39 @@ s3:
 
 notifications-redis:
   fullnameOverride: notifications-redis
+  # The chart reserves 100m/128Mi per node; a notification bus this size idles
+  # under 10Mi, and there are four nodes.
+  master:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  replica:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
 
 nats:
   enabled: false
   fullnameOverride: nats
+  # The upstream chart sets no requests at all, which leaves the event bus
+  # BestEffort and first in line for eviction. It idles around 25Mi.
+  container:
+    merge:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
   config:
     jetstream:
       enabled: true
@@ -173,8 +202,8 @@ egress:
       value: "60s"
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
     limits:
       cpu: 500m
       memory: 256Mi
@@ -221,8 +250,8 @@ egress-gateway:
         secretName: egress-ca
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 20m
+      memory: 96Mi
     limits:
       cpu: 1000m
       memory: 512Mi
@@ -248,8 +277,8 @@ groups:
       value: *platformEndpointNats
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
     limits:
       cpu: 500m
       memory: 256Mi
@@ -257,6 +286,13 @@ groups:
 secrets:
   egressRules:
     grpcTarget: *platformEndpointEgress
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 
 users:
@@ -277,6 +313,13 @@ users:
       value: *platformEndpointNats
     - name: GROUP_SYNC_DURABLE
       value: "users-group-sync"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 apps:
   env:
@@ -294,6 +337,13 @@ apps:
       value: *platformEndpointNats
     - name: GROUP_SYNC_DURABLE
       value: "apps-group-sync"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 agents-orchestrator:
   env:
@@ -303,6 +353,13 @@ agents-orchestrator:
       value: *platformEndpointGroups
     - name: NATS_URL
       value: *platformEndpointNats
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 networks:
   enabled: false
@@ -335,8 +392,8 @@ networks:
       value: "60s"
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
     limits:
       cpu: 500m
       memory: 256Mi
@@ -346,6 +403,13 @@ gateway:
     egressRulesGrpcTarget: *platformEndpointEgress
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
+  resources:
+    requests:
+      cpu: 20m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 terminal-proxy:
   enabled: false
@@ -361,8 +425,171 @@ terminal-proxy:
       enabled: true
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 20m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+authorization:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+chat:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+identity:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+notifications:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+organizations:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+threads:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+token-counting:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+tracing:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+ziti-management:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+agents:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+expose:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+runners:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+llm:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+llm-proxy:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+files:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+media-proxy:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+console-app:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+chat-app:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+tracing-app:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
     limits:
       cpu: 500m
       memory: 256Mi
