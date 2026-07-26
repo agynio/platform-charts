@@ -38,33 +38,76 @@ platform:
     clientId: ""
     audience: ""
 
+# In-cluster Postgres, disabled by default. Enabling it makes the umbrella
+# self-contained: the chart creates one database per service and renders the
+# DATABASE_URL secret the services already expect
+# (platform.database.existingSecret), so no database has to be provisioned
+# beforehand. A production install leaves this off and points
+# platform.database at a managed instance instead.
+#
+# Single instance, single credential, no backups — this is a development and
+# evaluation convenience, not a production database.
 postgres:
   enabled: false
-  host: ""
-  port: 5432
-  sslMode: require
-  databaseNames:
-    egress: egress
-    groups: groups
-    networks: networks
+  fullnameOverride: platform-postgres
+  # Consumed by the postgres-helm subchart.
+  postgres:
+    database: agyn
+    username: agyn
+    password: agyn
+    pgdata: /var/lib/postgresql/data/pgdata
+  persistence:
+    enabled: true
+    size: 10Gi
+    mountPath: /var/lib/postgresql/data
+    volumeClaimTemplateName: data
+  probes:
+    readiness:
+      execCommand: ["pg_isready", "-U", "agyn"]
+    liveness:
+      execCommand: ["pg_isready", "-U", "agyn"]
+  resources:
+    requests:
+      cpu: 20m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  # Runs the generated CREATE DATABASE script on first initialisation.
+  extraVolumeMounts:
+    - name: init
+      mountPath: /docker-entrypoint-initdb.d
+      readOnly: true
+  extraVolumes:
+    - name: init
+      configMap:
+        name: platform-postgres-init
+  # sslmode for the generated URLs. In-cluster traffic to a bundled instance
+  # is not TLS-terminated, so this defaults to disable.
+  sslMode: disable
+  # Secret key (the name each service looks itself up by) mapped to the
+  # database created for it. The key must match
+  # platform.database.existingSecretKeyPattern rendered for that service.
+  databases:
     agents: agents
-    agentsOrchestrator: orchestrator
+    agents-orchestrator: orchestrator
     apps: apps
     chat: chat
+    egress: egress
     expose: expose
     files: files
+    groups: groups
     identity: identity
     llm: llm
+    metering: metering
+    networks: networks
     organizations: organizations
     runners: runners
     secrets: secrets
     threads: threads
     tracing: tracing
     users: users
-    zitiManagement: ziti_management
-  existingSecret: ""
-  usernameKeyPattern: "{{ service }}-username"
-  passwordKeyPattern: "{{ service }}-password"
+    ziti-management: ziti_management
 
 s3:
   existingSecret: agyn-files-s3

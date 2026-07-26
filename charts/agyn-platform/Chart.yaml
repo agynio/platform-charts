@@ -9,6 +9,14 @@ sources:
   - https://github.com/agynio/platform-charts
 kubeVersion: ">=1.26.0-0"
 dependencies:
+  # Optional in-cluster database, so the umbrella can stand up a working
+  # platform on its own. Production points platform.database at a managed
+  # instance and leaves this disabled.
+  - name: postgres-helm
+    alias: postgres
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.1
+    condition: postgres.enabled
   - name: egress
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.1
