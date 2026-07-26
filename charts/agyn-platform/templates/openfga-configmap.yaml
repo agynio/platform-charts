@@ -8,6 +8,6 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
 data:
-  OPENFGA_API_URL: {{ .Values.openfga.apiUrl | quote }}
-  OPENFGA_STORE_ID: {{ .Values.openfga.storeId | quote }}
-  OPENFGA_MODEL_ID: {{ .Values.openfga.modelId | quote }}
+  OPENFGA_API_URL: {{ .Values.platform.openfga.apiUrl | quote }}
+  OPENFGA_STORE_ID: {{ .Values.platform.openfga.storeId | quote }}
+  OPENFGA_MODEL_ID: {{ .Values.platform.openfga.modelId | quote }}

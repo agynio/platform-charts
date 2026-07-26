@@ -31,6 +31,73 @@ platform:
   eventBus:
     url: *platformEndpointNats
     urlEnvName: NATS_URL
+  # Namespace agent and sandbox workloads are scheduled into. It is separate
+  # from the platform namespace so workload pods never share a namespace with
+  # the services that control them.
+  workloads:
+    namespace: agyn-workloads
+    createNamespace: true
+  egressCa:
+    create: true
+    secretName: egress-ca
+    commonName: Agyn Egress CA
+    duration: 87600h
+    issuerRef:
+      name: selfsigned
+      kind: ClusterIssuer
+  secretsEncryptionKey:
+    create: true
+    secretName: secrets-encryption-key
+    key: encryptionKey
+  # Istio routing for the platform's public hostnames.
+  ingress:
+    enabled: false
+    baseDomain: ""
+    gateway:
+      create: true
+      name: platform-gateway
+      namespace: istio-gateway
+      tlsSecret: wildcard-agyn-dev-tls
+      selector:
+        istio: ingressgateway
+      # Hosts served by other gateways on the same listener (Argo CD, minio).
+      extraHosts: []
+    # subdomain "" means the bare base domain. apiToGateway sends /api and
+    # /socket.io to the platform gateway so a UI and its API share a hostname.
+    routes:
+      - name: gateway
+        subdomain: gateway
+        service: gateway
+        port: 8080
+      - name: console-app
+        subdomain: console
+        service: console-app
+        port: 8080
+        apiToGateway: true
+      - name: chat-app
+        subdomain: chat
+        service: chat-app
+        port: 8080
+        apiToGateway: true
+      - name: tracing-app
+        subdomain: tracing
+        service: tracing-app
+        port: 8080
+        apiToGateway: true
+      - name: llm-proxy
+        subdomain: llm
+        service: llm-proxy
+        port: 8080
+      - name: media-proxy
+        subdomain: media
+        service: media-proxy
+        port: 8080
+  # Connection details every service reads. The openfga.* block below deploys
+  # an instance that satisfies these; point them elsewhere to use a managed one.
+  openfga:
+    apiUrl: http://openfga.platform.svc.cluster.local:8080
+    storeId: ""
+    modelId: ""
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
   # Set both fields together when wiring a real issuer.
   oidc:
@@ -111,13 +178,16 @@ postgres:
 
 s3:
   existingSecret: agyn-files-s3
+  # Rendered from the minio credentials below when the bundled instance is on.
+  createSecret: true
   accessKeyKey: access-key
   secretKeyKey: secret-key
-  endpoint: s3.example.com
+  # Defaults target the bundled minio; override for managed object storage.
+  endpoint: minio:9000
   bucket: agyn-files
   region: us-east-1
-  useSSL: true
-  forcePathStyle: false
+  useSSL: false
+  forcePathStyle: true
 
 notifications-redis:
   fullnameOverride: notifications-redis
@@ -201,10 +271,96 @@ nats:
           subjects:
             - agyn.networks.>
 
+# Authorization store. platform.openfga carries the connection details every
+# service reads; the openfga/openfga-db blocks below deploy an instance to
+# satisfy them. Point platform.openfga elsewhere and disable both to use a
+# managed OpenFGA.
 openfga:
-  apiUrl: http://openfga.openfga.svc.cluster.local:8080
-  storeId: ""
-  modelId: ""
+  enabled: true
+  fullnameOverride: openfga
+  replicaCount: 1
+  datastore:
+    engine: postgres
+    uri: postgresql://openfga:openfga@openfga-db:5432/openfga?sslmode=disable
+    applyMigrations: true
+    waitForMigrations: true
+    migrationType: initContainer
+  postgresql:
+    enabled: false
+  grpc:
+    addr: 0.0.0.0:8081
+  http:
+    enabled: true
+    addr: 0.0.0.0:8080
+  playground:
+    enabled: true
+    port: 3000
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+openfga-db:
+  enabled: true
+  fullnameOverride: openfga-db
+  postgres:
+    database: openfga
+    username: openfga
+    password: openfga
+    pgdata: /var/lib/postgresql/data/pgdata
+  persistence:
+    enabled: true
+    size: 5Gi
+    mountPath: /var/lib/postgresql/data
+    volumeClaimTemplateName: data
+  probes:
+    readiness:
+      execCommand: ["pg_isready", "-U", "openfga", "-d", "openfga"]
+    liveness:
+      execCommand: ["pg_isready", "-U", "openfga", "-d", "openfga"]
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Object storage backing the files service. s3.* is the connection contract;
+# this block deploys the instance that satisfies it.
+minio:
+  enabled: true
+  fullnameOverride: minio
+  mode: standalone
+  replicas: 1
+  rootUser: minioadmin
+  rootPassword: minioadmin
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 10m
+      memory: 256Mi
+  buckets: []
+  users: []
+  policies: []
+  customCommands: []
+  svcaccts: []
+
+metering:
+  enabled: true
+  fullnameOverride: metering
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 registryMirror:
   enabled: false
