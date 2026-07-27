@@ -1,0 +1,100 @@
+{{- if .Values.platform.ingress.enabled -}}
+{{- $ing := .Values.platform.ingress -}}
+{{- $domain := required "platform.ingress.baseDomain is required when platform.ingress.enabled is true" $ing.baseDomain -}}
+{{- $ns := .Release.Namespace -}}
+{{- $gwNs := $ing.gateway.namespace | default .Release.Namespace -}}
+{{- $labels := dict "app.kubernetes.io/name" (include "agyn-platform.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
+{{- $routes := $ing.routes | default list -}}
+{{- $hosts := list -}}
+{{- range $routes }}
+{{- $host := ternary $domain (printf "%s.%s" .subdomain $domain) (eq .subdomain "") -}}
+{{- $hosts = append $hosts $host -}}
+{{- end }}
+
+{{- if $ing.gateway.create }}
+{{- /*
+  One HTTPS listener carrying an explicit host list. It has to stay explicit:
+  a wildcard host with SIMPLE TLS on :443 shadows the Ziti PASSTHROUGH SNI
+  hosts sharing the same listener.
+*/}}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ $ing.gateway.name }}
+  namespace: {{ $gwNs }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  selector:
+{{ toYaml $ing.gateway.selector | indent 4 }}
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: {{ $ing.gateway.tlsSecret }}
+      hosts:
+{{- range (concat $hosts $ing.gateway.extraHosts) | uniq | sortAlpha }}
+        - {{ . | quote }}
+{{- end }}
+---
+{{- end }}
+
+{{- range $route := $routes }}
+{{- $host := ternary $domain (printf "%s.%s" $route.subdomain $domain) (eq $route.subdomain "") }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ $route.name }}
+  namespace: {{ $gwNs }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  hosts:
+    - {{ $host | quote }}
+  gateways:
+    - {{ $ing.gateway.name }}
+  http:
+{{- /*
+  UIs hand their API and websocket traffic to the platform gateway and keep the
+  rest for themselves, so a single hostname serves both the app and its API.
+*/}}
+{{- if $route.apiToGateway }}
+    - match:
+        - uri:
+            prefix: /api/
+        - uri:
+            exact: /api
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: {{ printf "gateway.%s.svc.cluster.local" $ns }}
+            port:
+              number: 8080
+    - match:
+        - uri:
+            prefix: /socket.io
+      route:
+        - destination:
+            host: {{ printf "gateway.%s.svc.cluster.local" $ns }}
+            port:
+              number: 8080
+{{- end }}
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: {{ printf "%s.%s.svc.cluster.local" $route.service ($route.namespace | default $ns) }}
+            port:
+              number: {{ $route.port }}
+---
+{{- end }}
+{{- end }}

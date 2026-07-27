@@ -1,0 +1,47 @@
+{{- if .Values.postgres.enabled -}}
+{{- $pg := .Values.postgres -}}
+{{- $auth := $pg.postgres -}}
+{{- $host := printf "%s.%s.svc" $pg.fullnameOverride .Release.Namespace -}}
+{{- $databases := $pg.databases -}}
+{{- if not $databases -}}
+{{- fail "postgres.databases must list the databases to create when postgres.enabled is true" -}}
+{{- end -}}
+{{- $secretName := required "platform.database.existingSecret is required" .Values.platform.database.existingSecret -}}
+{{- $keyPattern := required "platform.database.existingSecretKeyPattern is required" .Values.platform.database.existingSecretKeyPattern -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $pg.fullnameOverride }}-init
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+  # Postgres runs everything in docker-entrypoint-initdb.d exactly once, when
+  # the data directory is first initialised. Databases added here later reach
+  # an existing volume only if they are created by hand.
+  init.sql: |
+{{- range $service, $database := $databases }}
+    CREATE DATABASE {{ $database }};
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+  annotations:
+    # Rendered only for the bundled database. With postgres.enabled=false this
+    # secret belongs to the operator and the chart must not touch it.
+    agyn.io/managed-by-chart: "bundled-postgres"
+type: Opaque
+stringData:
+{{- range $service, $database := $databases }}
+  {{ tpl $keyPattern (dict "service" $service) }}: {{ printf "postgresql://%s:%s@%s:5432/%s?sslmode=%s" $auth.username $auth.password $host $database $pg.sslMode | quote }}
+{{- end }}
+{{- end }}

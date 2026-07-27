@@ -1,0 +1,90 @@
+{{- $ns := .Release.Namespace -}}
+{{- $labels := dict "app.kubernetes.io/name" (include "agyn-platform.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
+
+{{- if .Values.platform.workloads.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.platform.workloads.namespace }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+---
+{{- end }}
+
+{{- if .Values.platform.egressCa.create }}
+# Signing CA for the egress interception path. The orchestrator distributes the
+# public half to every workload; only the private half lives here.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.platform.egressCa.secretName }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  isCA: true
+  commonName: {{ .Values.platform.egressCa.commonName | quote }}
+  secretName: {{ .Values.platform.egressCa.secretName }}
+  duration: {{ .Values.platform.egressCa.duration | quote }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: {{ .Values.platform.egressCa.issuerRef.name }}
+    kind: {{ .Values.platform.egressCa.issuerRef.kind }}
+---
+{{- end }}
+
+{{- if .Values.platform.secretsEncryptionKey.create }}
+{{- $secretName := .Values.platform.secretsEncryptionKey.secretName -}}
+{{- $key := .Values.platform.secretsEncryptionKey.key -}}
+{{- /*
+  The Secrets service cannot decrypt anything written under a previous key, so
+  the existing value is read back and reused on upgrade. A fresh install gets a
+  random key rather than a shipped constant.
+*/ -}}
+{{- $existing := lookup "v1" "Secret" $ns $secretName -}}
+{{- $value := "" -}}
+{{- if and $existing $existing.data (index $existing.data $key) -}}
+{{- $value = index $existing.data $key | b64dec -}}
+{{- else -}}
+{{- $value = randAlphaNum 32 -}}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+  {{ $key }}: {{ $value | quote }}
+---
+{{- end }}
+
+{{- if and .Values.minio.enabled .Values.s3.createSecret }}
+# Credentials for the bundled object storage, taken from the same values the
+# minio subchart is configured with so the two cannot drift apart.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.s3.existingSecret }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+type: Opaque
+stringData:
+  {{ .Values.s3.accessKeyKey }}: {{ .Values.minio.rootUser | quote }}
+  {{ .Values.s3.secretKeyKey }}: {{ .Values.minio.rootPassword | quote }}
+{{- end }}
