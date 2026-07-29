@@ -1,3 +1,6 @@
+contractConfigMaps:
+  enabled: true
+
 global:
   imageRegistry: ""
   imagePullSecrets: []
@@ -24,10 +27,30 @@ platform:
     secrets: &platformEndpointSecrets "secrets:50051"
     metering: &platformEndpointMetering "metering:50051"
     tracing: &platformEndpointTracing "tracing:50051"
+    terminalProxy: &platformEndpointTerminalProxy "terminal-proxy:50051"
     agents: &platformEndpointAgents "agents:50051"
     runners: &platformEndpointRunners "runners:50051"
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
     nats: &platformEndpointNats "nats://nats:4222"
+  externalUrls:
+    terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.example.com/terminal"
+  runnersAuthorizationPolicy:
+    enabled: true
+    orchestratorServiceAccount:
+      name: agents-orchestrator
+      namespace: ""
+    identityServiceAccounts:
+      - name: gateway
+        namespace: ""
+      - name: expose
+        namespace: ""
+      - name: notifications
+        namespace: ""
+      - name: chat
+        namespace: ""
+    internalServiceAccounts:
+      - name: terminal-proxy
+        namespace: ""
   eventBus:
     url: *platformEndpointNats
     urlEnvName: NATS_URL
@@ -598,10 +621,15 @@ networks:
       memory: 256Mi
 
 gateway:
+  # Raw passthrough: the gateway subchart has no native key for this target.
+  env:
+    - name: TERMINAL_PROXY_GRPC_TARGET
+      value: *platformEndpointTerminalProxy
   gateway:
     egressRulesGrpcTarget: *platformEndpointEgress
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
+    terminalProxyGrpcTarget: *platformEndpointTerminalProxy
   resources:
     requests:
       cpu: 20m
@@ -611,21 +639,52 @@ gateway:
       memory: 256Mi
 
 terminal-proxy:
-  enabled: false
+  enabled: true
   fullnameOverride: terminal-proxy
+  podSecurityContext:
+    enabled: true
+    fsGroup: 10001
+  initContainers: []
+  # Configured through the subchart's own interface rather than a raw env list,
+  # so its required-value checks (websocketUrl, ticket signing key) actually run.
   terminalProxy:
+    websocketUrl: *platformTerminalProxyWebSocketURL
     runnersAddress: *platformEndpointRunners
     agentsAddress: *platformEndpointAgents
     authorizationAddress: *platformEndpointAuthorization
-    # Public WebSocket endpoint handed to clients when a ticket is issued.
-    # Must match the ingress host that routes to this service.
-    websocketUrl: ""
+    ticketSigningKey:
+      secretName: terminal-proxy-ticket-signing
+      secretKey: signing-key
+    # Reaching a runner in another network is only possible over the overlay,
+    # so this stays on. The identity is requested at startup and lease-renewed
+    # per pod, per openziti.md#service-identity-self-enrollment — there is no
+    # identity file or Secret to mount.
     ziti:
       enabled: true
+      managementAddress: *platformEndpointZitiManagement
+  service:
+    enabled: true
+    type: ClusterIP
+    ports:
+      - name: http
+        port: 8080
+        targetPort: http
+        protocol: TCP
+      - name: grpc
+        port: 50051
+        targetPort: grpc
+        protocol: TCP
+  containerPorts:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+    - name: grpc
+      containerPort: 50051
+      protocol: TCP
   resources:
     requests:
-      cpu: 20m
-      memory: 96Mi
+      cpu: 50m
+      memory: 128Mi
     limits:
       cpu: 500m
       memory: 256Mi
@@ -722,6 +781,8 @@ expose:
       memory: 256Mi
 
 runners:
+  authorizationPolicy:
+    enabled: false
   resources:
     requests:
       cpu: 20m

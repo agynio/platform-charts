@@ -98,6 +98,7 @@ helm dependency update charts/agyn-apps
 helm lint charts/agyn-platform charts/agyn-apps
 helm template agyn-platform charts/agyn-platform >/tmp/agyn-platform.yaml
 helm template agyn-apps charts/agyn-apps >/tmp/agyn-apps.yaml
+scripts/check-terminal-proxy-runners-policy.sh
 helm package charts/agyn-platform --destination .dist
 helm package charts/agyn-apps --destination .dist
 yamllint .
@@ -384,6 +385,42 @@ ZITI_IDENTITY_FILE
 EGRESS_CA_CERT_PATH
 EGRESS_CA_KEY_PATH
 ```
+
+Terminal Proxy-specific dependency overrides are also validated against the
+top-level service endpoint contract. The chart wires Gateway to
+`platform.serviceEndpoints.terminalProxy` through
+`gateway.env[TERMINAL_PROXY_GRPC_TARGET]` until the published Gateway chart has
+a native `gateway.terminalProxyGrpcTarget` value.
+
+Required Terminal Proxy env vars are wired by default:
+
+```text
+HTTP_ADDRESS
+GRPC_ADDRESS
+TERMINAL_PROXY_WEBSOCKET_URL
+TERMINAL_PROXY_TICKET_SIGNING_KEY
+RUNNERS_ADDRESS
+AGENTS_ADDRESS
+AUTHORIZATION_ADDRESS
+ZITI_ENABLED
+ZITI_IDENTITY_FILE
+```
+
+The Terminal Proxy ticket signing key is consumed from the
+`terminal-proxy-ticket-signing` Secret key `signing-key`. The Terminal Proxy
+Ziti enrollment JWT is consumed from the `terminal-proxy-enrollment` Secret key
+`enrollmentJwt`. An init container enrolls that JWT into
+`/var/run/agyn/terminal-proxy-ziti/identity.json` on an `emptyDir` volume before
+the Terminal Proxy container starts. In bootstrap environments these Secrets are
+created by the bootstrap platform stack; in external environments operators must
+provide them before enabling `terminal-proxy`.
+
+When Terminal Proxy is enabled, `agyn-platform` renders the Runners
+`runners-internal` AuthorizationPolicy directly and disables the upstream
+Runners chart policy. This keeps the existing caller-scoped Runners methods
+behind `x-identity-id`, while allowing the `terminal-proxy` service account to
+call only the internal unscoped Runners methods it needs:
+`ListWorkloads` and `TouchWorkload`.
 
 ## Egress deployment contract
 

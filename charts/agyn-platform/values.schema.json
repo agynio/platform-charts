@@ -346,6 +346,9 @@
             "egress": {
               "type": "string"
             },
+            "terminalProxy": {
+              "type": "string"
+            },
             "authorization": {
               "type": "string"
             },
@@ -390,6 +393,34 @@
             },
             "urlEnvName": {
               "type": "string"
+            }
+          }
+        },
+        "externalUrls": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "terminalProxyWebSocket": {
+              "type": "string"
+            }
+          }
+        },
+        "runnersAuthorizationPolicy": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "orchestratorServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "identityServiceAccounts": {
+              "type": "array"
+            },
+            "internalServiceAccounts": {
+              "type": "array"
             }
           }
         },

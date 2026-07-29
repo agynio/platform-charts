@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.5.12
+version: 0.6.2
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -27,11 +27,6 @@ dependencies:
     repository: https://openfga.github.io/helm-charts
     version: 0.2.56
     condition: openfga.enabled
-  - name: postgres-helm
-    alias: openfga-db
-    repository: oci://ghcr.io/agynio/charts
-    version: 0.1.1
-    condition: openfga-db.enabled
   - name: minio
     repository: https://charts.min.io
     version: 5.4.0
@@ -46,8 +41,12 @@ dependencies:
     condition: egress-gateway.enabled
   - name: gateway
     repository: oci://ghcr.io/agynio/charts
-    version: 0.22.12
+    version: 0.22.14
     condition: gateway.enabled
+  - name: terminal-proxy
+    repository: file://charts/terminal-proxy
+    version: 0.1.0
+    condition: terminal-proxy.enabled
   - name: agents
     repository: oci://ghcr.io/agynio/charts
     version: 0.7.6
@@ -98,7 +97,7 @@ dependencies:
     condition: runners.enabled
   - name: ziti-management
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.12
+    version: 0.10.17
     condition: ziti-management.enabled
   - name: expose
     repository: oci://ghcr.io/agynio/charts
@@ -118,10 +117,6 @@ dependencies:
     condition: llm-proxy.enabled
   # Vendored until terminal-proxy publishes its first chart release, the same
   # way groups and networks are carried.
-  - name: terminal-proxy
-    repository: file://charts/terminal-proxy
-    version: 0.1.0
-    condition: terminal-proxy.enabled
   - name: token-counting
     repository: oci://ghcr.io/agynio/charts
     version: 0.3.3
