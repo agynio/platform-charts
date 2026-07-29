@@ -1,0 +1,202 @@
+nameOverride: ""
+fullnameOverride: "terminal-proxy"
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+image:
+  registry: ""
+  repository: ghcr.io/agynio/terminal-proxy
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+replicaCount: 2
+revisionHistoryLimit: 10
+updateStrategy: {}
+
+deploymentAnnotations: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+automountServiceAccountToken: true
+
+rbac:
+  create: false
+  clusterWide: false
+  rules: []
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  enabled: false
+  fsGroup: null
+
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+priorityClassName: ""
+terminationGracePeriodSeconds: null
+
+service:
+  enabled: true
+  type: ClusterIP
+  annotations: {}
+  labels: {}
+  ports:
+    # WebSocket terminal sessions, reached through the ingress.
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    # Internal IssueTicket, called by the Gateway only.
+    - name: grpc
+      port: 50051
+      targetPort: grpc
+      protocol: TCP
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+  - name: grpc
+    containerPort: 50051
+    protocol: TCP
+
+command: []
+args: []
+env: []
+envFrom: []
+extraEnvVars: []
+extraEnvVarsCM: ""
+extraEnvVarsSecret: ""
+
+configMounts: []
+extraVolumeMounts: []
+extraVolumes: []
+
+initContainers: []
+extraContainers: []
+
+lifecycle: {}
+
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: ""
+  metrics: []
+  behavior: {}
+
+pdb:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+ingress:
+  enabled: false
+  ingressClassName: nginx
+  annotations: {}
+  hosts: []
+  tls: []
+
+metrics:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: ""
+    scrapeTimeout: ""
+    honorLabels: false
+    labels: {}
+    annotations: {}
+    relabelings: []
+    metricRelabelings: []
+    endpoints: []
+
+terminalProxy:
+  httpAddress: ":8080"
+  grpcAddress: ":50051"
+  # Public WebSocket URL handed to clients in IssueTicket responses.
+  websocketUrl: "ws://terminal-proxy:8080/terminal"
+  runnersAddress: "runners:50051"
+  agentsAddress: "agents:50051"
+  authorizationAddress: "authorization:50051"
+  ticketTTL: "30s"
+  touchInterval: "10s"
+  websocketPingInterval: "30s"
+  websocketPingTimeout: "30s"
+  # Tickets are HMAC-signed and validated by any replica, so every replica
+  # needs the same key. It is injected by secretKeyRef only — there is no
+  # values path that renders the key as a literal.
+  ticketSigningKey:
+    secretName: "terminal-proxy-ticket-signing-key"
+    secretKey: "signingKey"
+  ziti:
+    # Terminal Proxy dials runners over OpenZiti (runner-{runnerId}). This is
+    # the only path that reaches a runner outside this cluster, which runners
+    # generally are: they may be operator-managed and live in another network.
+    enabled: true
+    # An ephemeral identity is requested at startup and its lease renewed, the
+    # same way the Orchestrator obtains one for the identical dial. There is no
+    # identity to mount: the service type carries the terminal-proxy-hosts role
+    # attribute that the static dial policy grants against #runner-services.
+    managementAddress: "ziti-management:50051"
+    enrollmentTimeout: "2m"
+    leaseRenewalInterval: "2m"
+  # Direct runner address, used only when ziti.enabled is false. That bypasses
+  # the overlay and can only reach a runner sharing this cluster, so it is for
+  # local debugging — not a supported deployment.
+  runnerAddress: "k8s-runner:50051"

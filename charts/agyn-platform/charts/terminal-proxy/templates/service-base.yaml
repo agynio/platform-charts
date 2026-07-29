@@ -1,0 +1,16 @@
+{{- include "terminal-proxy.configureEnv" . -}}
+{{ include "service-base.rbac" . }}
+---
+{{ include "service-base.serviceAccount" . }}
+---
+{{ include "service-base.service" . }}
+---
+{{ include "service-base.deployment" . }}
+---
+{{ include "service-base.hpa" . }}
+---
+{{ include "service-base.ingress" . }}
+---
+{{ include "service-base.pdb" . }}
+---
+{{ include "service-base.metrics" . }}
