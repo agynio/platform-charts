@@ -12,7 +12,7 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
 
-replicaCount: 1
+replicaCount: 2
 revisionHistoryLimit: 10
 updateStrategy: {}
 
@@ -34,8 +34,8 @@ podAnnotations: {}
 podLabels: {}
 
 podSecurityContext:
-  enabled: true
-  fsGroup: 10001
+  enabled: false
+  fsGroup: null
 
 securityContext:
   enabled: true
@@ -57,10 +57,12 @@ service:
   annotations: {}
   labels: {}
   ports:
+    # WebSocket terminal sessions, reached through the ingress.
     - name: http
       port: 8080
       targetPort: http
       protocol: TCP
+    # Internal IssueTicket, called by the Gateway only.
     - name: grpc
       port: 50051
       targetPort: grpc
@@ -76,93 +78,53 @@ containerPorts:
 
 command: []
 args: []
-env:
-  - name: HTTP_ADDRESS
-    value: ":8080"
-  - name: GRPC_ADDRESS
-    value: ":50051"
-  - name: TERMINAL_PROXY_WEBSOCKET_URL
-    value: "wss://terminal.example.com/terminal"
-  - name: TERMINAL_PROXY_TICKET_SIGNING_KEY
-    valueFrom:
-      secretKeyRef:
-        name: terminal-proxy-ticket-signing
-        key: signing-key
-  - name: RUNNERS_ADDRESS
-    value: "runners:50051"
-  - name: AGENTS_ADDRESS
-    value: "agents:50051"
-  - name: AUTHORIZATION_ADDRESS
-    value: "authorization:50051"
-  - name: ZITI_ENABLED
-    value: "true"
-  - name: ZITI_IDENTITY_FILE
-    value: "/var/run/agyn/terminal-proxy-ziti/identity.json"
+env: []
 envFrom: []
 extraEnvVars: []
 extraEnvVarsCM: ""
 extraEnvVarsSecret: ""
 
 configMounts: []
-extraVolumeMounts:
-  - name: ziti-identity
-    mountPath: /var/run/agyn/terminal-proxy-ziti
-    readOnly: true
-extraVolumes:
-  - name: ziti-identity
-    emptyDir: {}
-  - name: ziti-enrollment
-    secret:
-      secretName: terminal-proxy-enrollment
+extraVolumeMounts: []
+extraVolumes: []
 
-initContainers:
-  - name: enroll-ziti-identity
-    image: openziti/ziti-cli:2.0.0-pre10
-    imagePullPolicy: IfNotPresent
-    command:
-      - /bin/sh
-      - -ec
-    args:
-      - |
-        ziti edge enroll \
-          --jwt /etc/ziti-enrollment/enrollmentJwt \
-          --out /var/run/agyn/terminal-proxy-ziti/identity.json
-        chown 10001:10001 /var/run/agyn/terminal-proxy-ziti/identity.json
-        chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json
-    volumeMounts:
-      - name: ziti-enrollment
-        mountPath: /etc/ziti-enrollment
-        readOnly: true
-      - name: ziti-identity
-        mountPath: /var/run/agyn/terminal-proxy-ziti
+initContainers: []
 extraContainers: []
 
 lifecycle: {}
 
 livenessProbe:
   enabled: true
-  tcpSocket:
+  httpGet:
+    path: /healthz
     port: http
   initialDelaySeconds: 10
   periodSeconds: 10
-  timeoutSeconds: 1
+  timeoutSeconds: 2
   failureThreshold: 3
   successThreshold: 1
 
 readinessProbe:
   enabled: true
-  tcpSocket:
+  httpGet:
+    path: /readyz
     port: http
   initialDelaySeconds: 5
   periodSeconds: 10
-  timeoutSeconds: 1
+  timeoutSeconds: 2
   failureThreshold: 3
   successThreshold: 1
 
 startupProbe:
   enabled: false
 
-resources: {}
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
 
 nodeSelector: {}
 tolerations: []
@@ -171,21 +133,21 @@ topologySpreadConstraints: []
 
 autoscaling:
   enabled: false
-  minReplicas: 1
-  maxReplicas: 3
-  targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: null
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: ""
   metrics: []
   behavior: {}
 
 pdb:
   enabled: false
-  minAvailable: null
+  minAvailable: 1
   maxUnavailable: null
 
 ingress:
   enabled: false
-  ingressClassName: ""
+  ingressClassName: nginx
   annotations: {}
   hosts: []
   tls: []
@@ -202,8 +164,39 @@ metrics:
     annotations: {}
     relabelings: []
     metricRelabelings: []
-    endpoints:
-      - port: http
-        path: /metrics
-        interval: ""
-        scrapeTimeout: ""
+    endpoints: []
+
+terminalProxy:
+  httpAddress: ":8080"
+  grpcAddress: ":50051"
+  # Public WebSocket URL handed to clients in IssueTicket responses.
+  websocketUrl: "ws://terminal-proxy:8080/terminal"
+  runnersAddress: "runners:50051"
+  agentsAddress: "agents:50051"
+  authorizationAddress: "authorization:50051"
+  ticketTTL: "30s"
+  touchInterval: "10s"
+  websocketPingInterval: "30s"
+  websocketPingTimeout: "30s"
+  # Tickets are HMAC-signed and validated by any replica, so every replica
+  # needs the same key. It is injected by secretKeyRef only — there is no
+  # values path that renders the key as a literal.
+  ticketSigningKey:
+    secretName: "terminal-proxy-ticket-signing-key"
+    secretKey: "signingKey"
+  ziti:
+    # Terminal Proxy dials runners over OpenZiti (runner-{runnerId}). This is
+    # the only path that reaches a runner outside this cluster, which runners
+    # generally are: they may be operator-managed and live in another network.
+    enabled: true
+    # An ephemeral identity is requested at startup and its lease renewed, the
+    # same way the Orchestrator obtains one for the identical dial. There is no
+    # identity to mount: the service type carries the terminal-proxy-hosts role
+    # attribute that the static dial policy grants against #runner-services.
+    managementAddress: "ziti-management:50051"
+    enrollmentTimeout: "2m"
+    leaseRenewalInterval: "2m"
+  # Direct runner address, used only when ziti.enabled is false. That bypasses
+  # the overlay and can only reach a runner sharing this cluster, so it is for
+  # local debugging — not a supported deployment.
+  runnerAddress: "k8s-runner:50051"

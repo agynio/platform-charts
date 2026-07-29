@@ -645,28 +645,23 @@ terminal-proxy:
     enabled: true
     fsGroup: 10001
   initContainers: []
-  env:
-    - name: HTTP_ADDRESS
-      value: ":8080"
-    - name: GRPC_ADDRESS
-      value: ":50051"
-    - name: TERMINAL_PROXY_WEBSOCKET_URL
-      value: *platformTerminalProxyWebSocketURL
-    - name: TERMINAL_PROXY_TICKET_SIGNING_KEY
-      valueFrom:
-        secretKeyRef:
-          name: terminal-proxy-ticket-signing
-          key: signing-key
-    - name: RUNNERS_ADDRESS
-      value: *platformEndpointRunners
-    - name: AGENTS_ADDRESS
-      value: *platformEndpointAgents
-    - name: AUTHORIZATION_ADDRESS
-      value: *platformEndpointAuthorization
-    - name: ZITI_ENABLED
-      value: "true"
-    - name: ZITI_IDENTITY_FILE
-      value: "/var/run/agyn/terminal-proxy-ziti/identity.json"
+  # Configured through the subchart's own interface rather than a raw env list,
+  # so its required-value checks (websocketUrl, ticket signing key) actually run.
+  terminalProxy:
+    websocketUrl: *platformTerminalProxyWebSocketURL
+    runnersAddress: *platformEndpointRunners
+    agentsAddress: *platformEndpointAgents
+    authorizationAddress: *platformEndpointAuthorization
+    ticketSigningKey:
+      secretName: terminal-proxy-ticket-signing
+      secretKey: signing-key
+    # Reaching a runner in another network is only possible over the overlay,
+    # so this stays on. The identity is requested at startup and lease-renewed
+    # per pod, per openziti.md#service-identity-self-enrollment — there is no
+    # identity file or Secret to mount.
+    ziti:
+      enabled: true
+      managementAddress: *platformEndpointZitiManagement
   service:
     enabled: true
     type: ClusterIP
@@ -686,15 +681,6 @@ terminal-proxy:
     - name: grpc
       containerPort: 50051
       protocol: TCP
-  extraVolumeMounts:
-    - name: ziti-identity
-      mountPath: /var/run/agyn/terminal-proxy-ziti
-      readOnly: true
-  extraVolumes:
-    - name: ziti-identity
-      secret:
-        secretName: terminal-proxy-ziti-identity
-        defaultMode: 288
   resources:
     requests:
       cpu: 50m

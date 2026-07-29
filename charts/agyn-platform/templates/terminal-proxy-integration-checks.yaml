@@ -2,27 +2,19 @@
 {{- $terminalWebSocketURL := required "platform.externalUrls.terminalProxyWebSocket is required" .Values.platform.externalUrls.terminalProxyWebSocket -}}
 {{- $terminalValues := index .Values "terminal-proxy" -}}
 {{- if $terminalValues.enabled -}}
-{{- $podSecurityContext := $terminalValues.podSecurityContext | default dict -}}
-{{- if ne (int $podSecurityContext.fsGroup) 10001 -}}
-{{- fail "terminal-proxy podSecurityContext.fsGroup must equal 10001 so the runtime container can read the enrolled identity" -}}
-{{- end -}}
-{{- $terminalEnv := dict -}}
-{{- range $env := $terminalValues.env | default list -}}
-{{- $_ := set $terminalEnv $env.name $env -}}
-{{- end -}}
-{{- $requiredTerminalEnv := dict "HTTP_ADDRESS" ":8080" "GRPC_ADDRESS" ":50051" "TERMINAL_PROXY_WEBSOCKET_URL" $terminalWebSocketURL "RUNNERS_ADDRESS" .Values.platform.serviceEndpoints.runners "AGENTS_ADDRESS" .Values.platform.serviceEndpoints.agents "AUTHORIZATION_ADDRESS" .Values.platform.serviceEndpoints.authorization "ZITI_ENABLED" "true" "ZITI_IDENTITY_FILE" "/var/run/agyn/terminal-proxy-ziti/identity.json" -}}
-{{- range $name, $value := $requiredTerminalEnv -}}
-{{- $env := required (printf "terminal-proxy.env must include %s" $name) (get $terminalEnv $name) -}}
-{{- if ne $env.value $value -}}
-{{- fail (printf "terminal-proxy.env[%s] must equal %s" $name $value) -}}
+{{- $terminalProxy := $terminalValues.terminalProxy | default dict -}}
+{{- $requiredTerminalValues := dict "websocketUrl" $terminalWebSocketURL "runnersAddress" .Values.platform.serviceEndpoints.runners "agentsAddress" .Values.platform.serviceEndpoints.agents "authorizationAddress" .Values.platform.serviceEndpoints.authorization -}}
+{{- range $name, $value := $requiredTerminalValues -}}
+{{- $actual := get $terminalProxy $name -}}
+{{- if ne $actual $value -}}
+{{- fail (printf "terminal-proxy.terminalProxy.%s must equal %s" $name $value) -}}
 {{- end -}}
 {{- end -}}
-{{- $signingEnv := required "terminal-proxy.env must include TERMINAL_PROXY_TICKET_SIGNING_KEY" (get $terminalEnv "TERMINAL_PROXY_TICKET_SIGNING_KEY") -}}
-{{- $signingSecretRef := required "terminal-proxy TERMINAL_PROXY_TICKET_SIGNING_KEY must use valueFrom.secretKeyRef" $signingEnv.valueFrom.secretKeyRef -}}
-{{- if ne $signingSecretRef.name "terminal-proxy-ticket-signing" -}}
+{{- $signingKey := required "terminal-proxy.terminalProxy.ticketSigningKey is required" $terminalProxy.ticketSigningKey -}}
+{{- if ne $signingKey.secretName "terminal-proxy-ticket-signing" -}}
 {{- fail "terminal-proxy ticket signing secret name must equal terminal-proxy-ticket-signing" -}}
 {{- end -}}
-{{- if ne $signingSecretRef.key "signing-key" -}}
+{{- if ne $signingKey.secretKey "signing-key" -}}
 {{- fail "terminal-proxy ticket signing secret key must equal signing-key" -}}
 {{- end -}}
 {{- $ports := dict -}}
@@ -37,69 +29,33 @@
 {{- if or (ne (int $grpcPort.port) 50051) (ne $grpcPort.targetPort "grpc") -}}
 {{- fail "terminal-proxy service grpc port must expose 50051 -> grpc" -}}
 {{- end -}}
-{{- $mounts := dict -}}
+{{- /* Identity handling must follow openziti.md#service-identity-self-enrollment:
+       an infrastructure service on the overlay requests an ephemeral identity
+       from Ziti Management at startup and renews its lease, so the identity is
+       per-pod and dies with it. A mounted identity breaks that — a Secret is
+       shared by every replica, and this service is explicitly designed to run
+       several (the ticket signing key is shared precisely so any replica can
+       validate another's ticket). Assert the identity is *not* mounted. */ -}}
+{{- $ziti := $terminalProxy.ziti | default dict -}}
+{{- if not $ziti.enabled -}}
+{{- fail "terminal-proxy.terminalProxy.ziti.enabled must be true: dialing a runner in another network is only possible over the overlay" -}}
+{{- end -}}
+{{- if ne $ziti.managementAddress .Values.platform.serviceEndpoints.zitiManagement -}}
+{{- fail (printf "terminal-proxy.terminalProxy.ziti.managementAddress must equal platform.serviceEndpoints.zitiManagement (%s)" .Values.platform.serviceEndpoints.zitiManagement) -}}
+{{- end -}}
 {{- range $mount := $terminalValues.extraVolumeMounts | default list -}}
-{{- $_ := set $mounts $mount.name $mount -}}
+{{- if or (eq $mount.name "ziti-identity") (eq $mount.name "ziti-enrollment") -}}
+{{- fail (printf "terminal-proxy must not mount %s: the identity is requested from Ziti Management per pod, not mounted" $mount.name) -}}
 {{- end -}}
-{{- $zitiMount := required "terminal-proxy.extraVolumeMounts must include ziti-identity" (get $mounts "ziti-identity") -}}
-{{- if ne $zitiMount.mountPath "/var/run/agyn/terminal-proxy-ziti" -}}
-{{- fail "terminal-proxy ziti-identity mountPath must equal /var/run/agyn/terminal-proxy-ziti" -}}
 {{- end -}}
-{{- if not $zitiMount.readOnly -}}
-{{- fail "terminal-proxy ziti-identity runtime mount must be readOnly" -}}
-{{- end -}}
-{{- $volumes := dict -}}
 {{- range $volume := $terminalValues.extraVolumes | default list -}}
-{{- $_ := set $volumes $volume.name $volume -}}
+{{- if or (eq $volume.name "ziti-identity") (eq $volume.name "ziti-enrollment") -}}
+{{- fail (printf "terminal-proxy must not define the %s volume: a mounted identity is shared across replicas and survives restarts" $volume.name) -}}
 {{- end -}}
-{{- $zitiVolume := required "terminal-proxy.extraVolumes must include ziti-identity" (get $volumes "ziti-identity") -}}
-{{- $stableIdentityMode := false -}}
-{{- if hasKey $zitiVolume "secret" -}}
-{{- if ne $zitiVolume.secret.secretName "terminal-proxy-ziti-identity" -}}
-{{- fail "terminal-proxy ziti-identity secretName must equal terminal-proxy-ziti-identity" -}}
 {{- end -}}
-{{- $stableIdentityMode = true -}}
-{{- else if not (hasKey $zitiVolume "emptyDir") -}}
-{{- fail "terminal-proxy ziti-identity volume must be a stable Secret or an emptyDir populated by the enrollment initContainer" -}}
-{{- end -}}
-{{- $initContainers := dict -}}
 {{- range $container := $terminalValues.initContainers | default list -}}
-{{- $_ := set $initContainers $container.name $container -}}
-{{- end -}}
-{{- if $stableIdentityMode -}}
-{{- if hasKey $volumes "ziti-enrollment" -}}
-{{- fail "terminal-proxy stable identity mode must not include ziti-enrollment volume" -}}
-{{- end -}}
-{{- if hasKey $initContainers "enroll-ziti-identity" -}}
-{{- fail "terminal-proxy stable identity mode must not include enroll-ziti-identity initContainer" -}}
-{{- end -}}
-{{- else -}}
-{{- $zitiEnrollmentVolume := required "terminal-proxy.extraVolumes must include ziti-enrollment" (get $volumes "ziti-enrollment") -}}
-{{- if ne $zitiEnrollmentVolume.secret.secretName "terminal-proxy-enrollment" -}}
-{{- fail "terminal-proxy ziti-enrollment volume secretName must equal terminal-proxy-enrollment" -}}
-{{- end -}}
-{{- $enrollInit := required "terminal-proxy.initContainers must include enroll-ziti-identity" (get $initContainers "enroll-ziti-identity") -}}
-{{- $initMounts := dict -}}
-{{- range $mount := $enrollInit.volumeMounts | default list -}}
-{{- $_ := set $initMounts $mount.name $mount -}}
-{{- end -}}
-{{- $initEnrollmentMount := required "terminal-proxy enroll-ziti-identity initContainer must mount ziti-enrollment" (get $initMounts "ziti-enrollment") -}}
-{{- if ne $initEnrollmentMount.mountPath "/etc/ziti-enrollment" -}}
-{{- fail "terminal-proxy ziti-enrollment mountPath must equal /etc/ziti-enrollment" -}}
-{{- end -}}
-{{- $initIdentityMount := required "terminal-proxy enroll-ziti-identity initContainer must mount ziti-identity" (get $initMounts "ziti-identity") -}}
-{{- if ne $initIdentityMount.mountPath "/var/run/agyn/terminal-proxy-ziti" -}}
-{{- fail "terminal-proxy enroll-ziti-identity ziti-identity mountPath must equal /var/run/agyn/terminal-proxy-ziti" -}}
-{{- end -}}
-{{- $initArgs := join "\n" ($enrollInit.args | default list) -}}
-{{- if or (not (contains "ziti edge enroll" $initArgs)) (not (contains "--jwt /etc/ziti-enrollment/enrollmentJwt" $initArgs)) (not (contains "--out /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs)) -}}
-{{- fail "terminal-proxy enroll-ziti-identity initContainer must enroll terminal-proxy identity.json from terminal-proxy-enrollment/enrollmentJwt" -}}
-{{- end -}}
-{{- if not (contains "chown 10001:10001 /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs) -}}
-{{- fail "terminal-proxy enroll-ziti-identity initContainer must chown identity.json to runtime UID 10001" -}}
-{{- end -}}
-{{- if not (contains "chmod 0400 /var/run/agyn/terminal-proxy-ziti/identity.json" $initArgs) -}}
-{{- fail "terminal-proxy enroll-ziti-identity initContainer must keep identity.json owner-readable only after chown" -}}
+{{- if eq $container.name "enroll-ziti-identity" -}}
+{{- fail "terminal-proxy must not run the enroll-ziti-identity initContainer: enrollment happens in-process at startup" -}}
 {{- end -}}
 {{- end -}}
 {{- $runnersValues := .Values.runners | default dict -}}
