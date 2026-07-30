@@ -491,7 +491,11 @@ egress-gateway:
       memory: 512Mi
 
 groups:
-  enabled: false
+  # On by default. The Gateway routes GroupsGateway to it unconditionally and
+  # several services dial groups:50051, so an install without it answers those
+  # calls with 503. It was gated only because it needs the event bus, which
+  # now ships enabled too.
+  enabled: true
   fullnameOverride: groups
   env:
     - name: GRPC_ADDRESS
