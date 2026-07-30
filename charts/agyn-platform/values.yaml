@@ -377,6 +377,14 @@ minio:
 metering:
   enabled: true
   fullnameOverride: metering
+  env:
+    - name: GRPC_ADDRESS
+      value: ":50051"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: metering
   resources:
     requests:
       cpu: 10m
