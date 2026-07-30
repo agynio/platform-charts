@@ -234,7 +234,11 @@ notifications-redis:
         memory: 256Mi
 
 nats:
-  enabled: false
+  # On by default: the platform's own services assume an event bus. networks
+  # exits without one, and apps, users and agents-orchestrator lose group sync
+  # silently rather than failing. Point them at an external NATS by disabling
+  # this and overriding the endpoint.
+  enabled: true
   fullnameOverride: nats
   # The upstream chart sets no requests at all, which leaves the event bus
   # BestEffort and first in line for eviction. It idles around 25Mi.
