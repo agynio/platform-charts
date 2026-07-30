@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.6.2
+version: 0.6.3
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
