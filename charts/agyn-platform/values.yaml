@@ -600,7 +600,12 @@ agents-orchestrator:
       memory: 256Mi
 
 networks:
-  enabled: false
+  # On by default, like the other services the Gateway routes to. It needs more
+  # than the event bus: an OpenZiti overlay whose service policies let runners
+  # bind, and a ziti-management new enough to serve ListServicesByTag. Without
+  # those it reports "service not found in ziti network" or exits on its first
+  # reconciliation — disable it on installs that have no overlay.
+  enabled: true
   fullnameOverride: networks
   env:
     - name: GRPC_ADDRESS
