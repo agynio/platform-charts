@@ -1,3 +1,7 @@
+# The Gateway is reached at "gateway", not the subchart-default
+# "gateway-gateway": this chart only ever sits on top of agyn-platform, which
+# renders that Service under a fullnameOverride. The default it shipped with
+# resolved nowhere, and every app here failed to enroll on startup.
 global:
   imageRegistry: ""
   imagePullSecrets: []
@@ -29,7 +33,7 @@ reminders:
     - name: GATEWAY_SERVICE_NAME
       value: gateway
     - name: GATEWAY_URL
-      value: http://gateway-gateway.platform.svc.cluster.local:8080
+      value: http://gateway.platform.svc.cluster.local:8080
     - name: SERVICE_TOKEN
       valueFrom:
         secretKeyRef:
@@ -53,7 +57,7 @@ telegram-connector:
           name: telegram-connector-service-token
           key: token
     - name: GATEWAY_URL
-      value: http://gateway-gateway.platform.svc.cluster.local:8080
+      value: http://gateway.platform.svc.cluster.local:8080
     - name: ZITI_SERVICE_NAME
       value: app-telegram
     - name: GATEWAY_SERVICE_NAME
@@ -76,7 +80,7 @@ k8s-runner:
     - name: ZITI_ENABLED
       value: "true"
     - name: GATEWAY_ADDRESS
-      value: gateway-gateway.platform.svc.cluster.local:8080
+      value: gateway.platform.svc.cluster.local:8080
     - name: CAPABILITY_IMPLEMENTATIONS
       value: '{"docker":"rootless"}'
     - name: SERVICE_TOKEN
