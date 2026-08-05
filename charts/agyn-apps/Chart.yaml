@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-apps
 description: Umbrella chart for Agyn apps and the default runner.
 type: application
-version: 0.1.3
+version: 0.1.4
 appVersion: "0.1.1"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -19,5 +19,5 @@ dependencies:
     condition: apps.telegramConnector.enabled
   - name: k8s-runner
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.17
+    version: 0.10.18
     condition: runners.k8s.enabled
