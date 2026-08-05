@@ -188,6 +188,8 @@ postgres:
     files: files
     groups: groups
     identity: identity
+    image-proxy: image_proxy
+    images: images
     llm: llm
     metering: metering
     networks: networks
@@ -743,6 +745,22 @@ notifications:
       cpu: 500m
       memory: 256Mi
 organizations:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+images:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+image-proxy:
   resources:
     requests:
       cpu: 10m

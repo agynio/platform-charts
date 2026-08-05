@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.9.22
+version: 0.10.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -19,7 +19,7 @@ dependencies:
     condition: postgres.enabled
   - name: metering
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.4
+    version: 0.1.5
     condition: metering.enabled
   # Authorization store and its database. Optional for the same reason as
   # postgres: an operator with a managed OpenFGA points platform.openfga at it.
@@ -37,23 +37,31 @@ dependencies:
     condition: egress.enabled
   - name: egress-gateway
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.7
+    version: 0.1.8
     condition: egress-gateway.enabled
   - name: gateway
     repository: oci://ghcr.io/agynio/charts
-    version: 0.22.18
+    version: 0.23.0
     condition: gateway.enabled
   - name: terminal-proxy
     repository: oci://ghcr.io/agynio/charts
-    version: 0.6.1
+    version: 0.6.2
     condition: terminal-proxy.enabled
+  - name: images
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: images.enabled
+  - name: image-proxy
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: image-proxy.enabled
   - name: agents
     repository: oci://ghcr.io/agynio/charts
-    version: 0.7.12
+    version: 0.8.0
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.13.29
+    version: 0.14.1
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
@@ -69,7 +77,7 @@ dependencies:
     condition: users.enabled
   - name: organizations
     repository: oci://ghcr.io/agynio/charts
-    version: 0.4.5
+    version: 0.5.0
     condition: organizations.enabled
   - name: identity
     repository: oci://ghcr.io/agynio/charts
@@ -93,7 +101,7 @@ dependencies:
     condition: apps.enabled
   - name: runners
     repository: oci://ghcr.io/agynio/charts
-    version: 0.5.15
+    version: 0.6.0
     condition: runners.enabled
   - name: ziti-management
     repository: oci://ghcr.io/agynio/charts
@@ -105,7 +113,7 @@ dependencies:
     condition: expose.enabled
   - name: secrets
     repository: oci://ghcr.io/agynio/charts
-    version: 0.2.2
+    version: 0.3.0
     condition: secrets.enabled
   - name: llm
     repository: oci://ghcr.io/agynio/charts
@@ -147,7 +155,7 @@ dependencies:
     condition: chat-app.enabled
   - name: console-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.18
+    version: 0.11.0
     condition: console-app.enabled
   - name: tracing-app
     repository: oci://ghcr.io/agynio/charts
