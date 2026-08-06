@@ -1,11 +1,19 @@
-{{- if .Values.postgres.enabled -}}
+{{- $prov := .Values.platform.database.provisioning -}}
+{{- if $prov.enabled -}}
 {{- $pg := .Values.postgres -}}
-{{- $auth := $pg.postgres -}}
-{{- $host := printf "%s.%s.svc" $pg.fullnameOverride .Release.Namespace -}}
-{{- $databases := $pg.databases -}}
-# The init script creates databases only when the data directory is first
-# initialised, so a service added to an existing install has none. This creates
-# what is missing before anything that needs it starts.
+{{- $databases := $prov.databases | default $pg.databases -}}
+{{- if not $databases -}}
+{{- fail "platform.database.provisioning.databases must list the databases to create, or set platform.database.provisioning.enabled=false" -}}
+{{- end -}}
+{{- $adminSecret := $prov.adminSecret -}}
+{{- if and (not $adminSecret) (not $pg.enabled) -}}
+{{- fail "platform.database.provisioning.adminSecret is required when the bundled postgres is off: creating a database needs credentials that may create one. Set it, or provision the databases yourself and set platform.database.provisioning.enabled=false" -}}
+{{- end -}}
+# Databases a service needs must exist before it starts. The bundled postgres
+# creates them from its init script, but only when its volume is first
+# initialised, so a service added to a running install would find none and
+# crash-loop until the release timed out. This creates what is missing, for a
+# bundled instance and an operator's own alike.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -20,7 +28,7 @@ metadata:
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
-  backoffLimit: 6
+  backoffLimit: {{ $prov.backoffLimit }}
   template:
     metadata:
       labels:
@@ -30,24 +38,41 @@ spec:
       restartPolicy: Never
       containers:
         - name: create-databases
-          image: {{ $pg.image | default "postgres:16.6-alpine" | quote }}
+          image: "{{ $prov.image.repository }}:{{ $prov.image.tag }}"
+          imagePullPolicy: {{ $prov.image.pullPolicy }}
           env:
-            - name: PGHOST
-              value: {{ $host | quote }}
-            - name: PGUSER
-              value: {{ $auth.username | quote }}
-            - name: PGPASSWORD
-              value: {{ $auth.password | quote }}
-            - name: PGDATABASE
-              value: {{ $auth.database | quote }}
+            {{- if $adminSecret }}
+            - name: ADMIN_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $adminSecret.name | quote }}
+                  key: {{ $adminSecret.key | quote }}
+            {{- else }}
+            - name: ADMIN_URL
+              value: {{ printf "postgres://%s:%s@%s.%s.svc:5432/%s?sslmode=%s" $pg.postgres.username $pg.postgres.password $pg.fullnameOverride .Release.Namespace $pg.postgres.database $pg.sslMode | quote }}
+            {{- end }}
           command:
             - /bin/sh
             - -ec
           args:
             - |
-              until pg_isready -q; do sleep 2; done
+              # Waiting is bounded: an unreachable database is a failure to
+              # report, not something to hang the release on.
+              waited=0
+              until psql "$ADMIN_URL" -c 'SELECT 1' >/dev/null 2>&1; do
+                waited=$((waited + 5))
+                if [ "$waited" -ge {{ $prov.waitTimeoutSeconds }} ]; then
+                  echo "database unreachable after ${waited}s" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
               {{- range $service, $database := $databases }}
-              psql -v ON_ERROR_STOP=1 -tc "SELECT 1 FROM pg_database WHERE datname = '{{ $database }}'" \
-                | grep -q 1 || psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE {{ $database }}"
+              if psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname = '{{ $database }}'" | grep -q 1; then
+                echo "{{ $database }}: present"
+              else
+                echo "{{ $database }}: creating"
+                psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE {{ $database }}"
+              fi
               {{- end }}
 {{- end }}
