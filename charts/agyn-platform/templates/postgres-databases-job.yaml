@@ -11,8 +11,10 @@
 # only that it timed out waiting. This says which database is missing, and
 # creates it when the platform's own credentials are allowed to.
 #
-# The database list is created by the bundled postgres only when its volume is
-# first initialised, so a service added to a running install finds none.
+# Upgrades only. A first install has nothing to reconcile -- the bundled
+# postgres runs its init script, an operator's own is provisioned before the
+# release -- and neither the server nor the secret this reads exists yet when a
+# pre-install hook runs.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -23,7 +25,7 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook: pre-upgrade
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
