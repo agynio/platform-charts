@@ -22,11 +22,14 @@ platform:
       enabled: true
       # Defaults to postgres.databases. Set to provision a different set.
       databases: {}
-      # Credentials allowed to create a database. Required when the bundled
-      # postgres is off; otherwise the bundled instance's own are used.
-      adminSecret: {}
-      #  name: my-postgres-admin
-      #  key: url
+      # Credentials allowed to create a database. Only needed when the
+      # platform's own user may not; otherwise a service URL from
+      # platform.database.existingSecret names the same server.
+      adminSecret:
+        name: ""
+        key: url
+      # Connected to while checking, so it must exist already.
+      maintenanceDatabase: postgres
       waitTimeoutSeconds: 300
       backoffLimit: 6
       image:
