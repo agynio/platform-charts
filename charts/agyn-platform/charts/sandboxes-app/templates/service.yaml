@@ -1,1 +1,0 @@
-{{- include "sandboxes-app.render" (dict "template" "service-base.service" "context" .) -}}
