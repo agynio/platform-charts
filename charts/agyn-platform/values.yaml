@@ -39,6 +39,7 @@ platform:
   databaseUrlEnvName: DATABASE_URL
   serviceEndpoints:
     egress: &platformEndpointEgress "egress:50051"
+    llm: &platformEndpointLlm "llm:50051"
     # Downstream egress, egress-gateway, Gateway, and Secrets targets derive
     # from these endpoint anchors; render-time checks prevent override drift.
     authorization: &platformEndpointAuthorization "authorization:50051"
@@ -561,6 +562,10 @@ groups:
 secrets:
   egressRules:
     grpcTarget: *platformEndpointEgress
+  # Deleting a secret a Subscription references is refused, so Secrets must be
+  # able to ask. Unset, deletes fail closed rather than orphaning a credential.
+  llm:
+    grpcTarget: *platformEndpointLlm
   resources:
     requests:
       cpu: 10m
