@@ -495,14 +495,16 @@ egress-gateway:
   extraVolumeMounts:
     - name: ziti-identity
       mountPath: /var/lib/ziti
-      readOnly: true
+      readOnly: false
     - name: egress-ca
       mountPath: /var/run/agyn/egress-ca
       readOnly: true
   extraVolumes:
+    # Writable: the gateway self-enrols at startup and writes its identity
+    # here. A pre-enrolled secret mount made that write fail on a read-only
+    # filesystem, and the data plane never came up.
     - name: ziti-identity
-      secret:
-        secretName: egress-gateway-ziti-identity
+      emptyDir: {}
     - name: egress-ca
       secret:
         secretName: egress-ca
