@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.11.2
+version: 0.12.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -88,7 +88,7 @@ dependencies:
   # and networks are carried.
   - name: keycloak
     repository: file://charts/keycloak
-    version: 0.1.0
+    version: 0.2.0
     condition: keycloak.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts

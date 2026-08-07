@@ -45,6 +45,58 @@ externalUrl: https://auth.agyn.dev:2496
 
 realm: agyn
 
+# Everything needed to reach externalUrl, owned by this chart so an upgrade
+# delivers it. A bundle VM bakes its manifests once and wipes them, so anything
+# left outside the chart never reaches a machine that is already running.
+#
+# An install with real DNS and a publicly-trusted certificate wants none of it:
+# the hostname resolves everywhere, the port is 443, and the issuer's cert is
+# already trusted. Turn the pieces off individually there.
+routing:
+  # Istio Gateway + VirtualService for the auth hostname. Its own Gateway rather
+  # than a host on the platform's: two Gateways may share a port and selector as
+  # long as their hosts do not overlap, and a chart must not edit a resource it
+  # does not own.
+  enabled: false
+  host: ""
+  gatewaySelector:
+    istio: ingressgateway
+  tlsSecret: wildcard-agyn-dev-tls
+  gatewayNamespace: istio-gateway
+
+# One Job for the cluster wiring a chart cannot express as a template, run on
+# install and upgrade. Each piece is independently skippable and each is
+# idempotent.
+wiring:
+  enabled: false
+  image:
+    repository: bitnami/kubectl
+    tag: "1.33"
+    pullPolicy: IfNotPresent
+  # Copies the ingress CA into this namespace as a ConfigMap. The Gateway and
+  # Media Proxy fetch discovery, JWKS and userinfo from the issuer themselves,
+  # and a pod cannot read a Secret from another namespace.
+  caBundle:
+    enabled: false
+    sourceNamespace: istio-gateway
+    sourceSecret: agyn-dev-ca
+    configMapName: agyn-local-ca
+  # Points the auth hostname at the ingress from inside the cluster. Merged into
+  # coredns-custom rather than written over it -- OpenZiti keeps its own
+  # rewrites in the same ConfigMap.
+  corednsRewrite:
+    enabled: false
+    target: istio-ingressgateway.istio-gateway.svc.cluster.local
+  # Publishes the browser's port on the ingress Service, mapped to the same TLS
+  # listener. The issuer is one URL used from the browser and from in-cluster,
+  # so the port in it has to answer on both sides.
+  ingressHostPort:
+    enabled: false
+    port: 2496
+    service: istio-ingressgateway
+    namespace: istio-gateway
+    targetPort: 443
+
 # Redirect targets for the four app clients. Empty entries drop the client, so
 # an install that runs only some of the apps does not carry dead redirect URIs.
 appOrigins:

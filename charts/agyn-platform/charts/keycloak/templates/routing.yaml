@@ -1,0 +1,52 @@
+{{- if .Values.routing.enabled }}
+{{- $host := .Values.routing.host | default (regexReplaceAll "^https?://" (regexReplaceAll ":[0-9]+$" .Values.externalUrl "") "") -}}
+{{- if not $host -}}
+{{- fail "keycloak.routing.host is required when routing is enabled, or set externalUrl so it can be derived" -}}
+{{- end -}}
+# Its own Gateway rather than a host added to the platform's. Istio allows two
+# Gateways to share a port and selector while their host lists stay disjoint,
+# and it keeps the auth route upgradeable with this chart instead of pinned to
+# whatever the image baked.
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ include "service-base.fullname" . }}
+  namespace: {{ .Values.routing.gatewayNamespace }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+spec:
+  selector:
+{{ toYaml .Values.routing.gatewaySelector | nindent 4 }}
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.routing.tlsSecret }}
+      hosts:
+        - {{ $host | quote }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "service-base.fullname" . }}
+  namespace: {{ .Values.routing.gatewayNamespace }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ $host | quote }}
+  gateways:
+    - {{ include "service-base.fullname" . }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: {{ printf "%s.%s.svc.cluster.local" (include "service-base.fullname" .) .Release.Namespace }}
+            port:
+              number: {{ (first .Values.service.ports).port }}
+{{- end }}
