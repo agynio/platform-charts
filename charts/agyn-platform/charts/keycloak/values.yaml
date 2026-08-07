@@ -64,14 +64,19 @@ routing:
   tlsSecret: wildcard-agyn-dev-tls
   gatewayNamespace: istio-gateway
 
-# One Job for the cluster wiring a chart cannot express as a template, run on
-# install and upgrade. Each piece is independently skippable and each is
-# idempotent.
+# One Job for the cluster wiring a chart cannot express as a template. It runs
+# BEFORE the release, so the port, the DNS name and the CA are in place by the
+# time anything that needs them starts -- run afterwards, the Gateway comes up
+# unable to reach the issuer and crashloops until something restarts it. Each
+# piece is independently skippable and each is idempotent.
 wiring:
   enabled: false
+  # Needs kubectl AND a shell: rancher/kubectl is distroless and bitnami no
+  # longer publishes versioned free tags (the same trap the notifications redis
+  # is pinned by digest for). Track the cluster's minor.
   image:
-    repository: bitnami/kubectl
-    tag: "1.33"
+    repository: alpine/k8s
+    tag: "1.33.1"
     pullPolicy: IfNotPresent
   # Copies the ingress CA into this namespace as a ConfigMap. The Gateway and
   # Media Proxy fetch discovery, JWKS and userinfo from the issuer themselves,
