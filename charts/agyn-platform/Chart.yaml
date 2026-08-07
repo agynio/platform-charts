@@ -158,11 +158,11 @@ dependencies:
     condition: media-proxy.enabled
   - name: chat-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.5.0
+    version: 0.5.1
     condition: chat-app.enabled
   - name: console-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.12.0
+    version: 0.13.0
     condition: console-app.enabled
   - name: tracing-app
     repository: oci://ghcr.io/agynio/charts
