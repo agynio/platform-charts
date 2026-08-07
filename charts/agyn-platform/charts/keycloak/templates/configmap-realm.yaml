@@ -1,0 +1,76 @@
+{{- $externalUrl := required "keycloak.externalUrl is required: it is the token issuer every OIDC consumer must be configured with" .Values.externalUrl -}}
+
+{{- /* Built as a dict and serialised, so the JSON is valid whichever clients
+       are enabled rather than depending on hand-placed commas. */ -}}
+{{- $groupsMapper := dict
+      "name" "groups"
+      "protocol" "openid-connect"
+      "protocolMapper" "oidc-group-membership-mapper"
+      "config" (dict
+        "full.path" "false"
+        "id.token.claim" "true"
+        "access.token.claim" "true"
+        "userinfo.token.claim" "true"
+        "claim.name" "groups")
+-}}
+
+{{- $clients := list -}}
+{{- range $app, $origin := .Values.appOrigins }}
+{{- if $origin }}
+{{- $clients = append $clients (dict
+      "clientId" (printf "agyn-%s" $app)
+      "name" (printf "Agyn %s" (title $app))
+      "enabled" true
+      "protocol" "openid-connect"
+      "publicClient" true
+      "standardFlowEnabled" true
+      "directAccessGrantsEnabled" true
+      "redirectUris" (list (printf "%s/*" $origin))
+      "webOrigins" (list $origin)
+      "attributes" (dict
+        "pkce.code.challenge.method" "S256"
+        "post.logout.redirect.uris" (printf "%s/*" $origin))
+      "protocolMappers" (list $groupsMapper))
+-}}
+{{- end }}
+{{- end }}
+
+{{- /* default-roles-<realm> is assigned to users created through Keycloak, but
+       NOT to users the realm import creates -- they come out with no realm role
+       at all. Without it there is no offline_access, and the apps ask for that
+       scope, so the code-to-token exchange fails with "Offline tokens not
+       allowed for the user or client" and the browser shows only "We couldn't
+       sign you in". */ -}}
+{{- $admin := dict
+      "username" .Values.adminUser.username
+      "email" .Values.adminUser.email
+      "firstName" .Values.adminUser.firstName
+      "lastName" .Values.adminUser.lastName
+      "enabled" true
+      "emailVerified" true
+      "requiredActions" (list)
+      "realmRoles" (list (printf "default-roles-%s" .Values.realm))
+      "credentials" (list (dict
+        "type" "password"
+        "value" "${AGYN_ADMIN_PASSWORD}"
+        "temporary" false))
+-}}
+
+{{- $realm := dict
+      "realm" .Values.realm
+      "enabled" true
+      "sslRequired" "none"
+      "registrationAllowed" false
+      "loginWithEmailAllowed" true
+      "users" (list $admin)
+      "clients" $clients
+-}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "keycloak.realmConfigMapName" . }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+data:
+  agyn-realm.json: |
+{{ toPrettyJson $realm | indent 4 }}

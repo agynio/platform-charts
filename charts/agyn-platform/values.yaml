@@ -55,7 +55,13 @@ platform:
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
     nats: &platformEndpointNats "nats://nats:4222"
   externalUrls:
-    terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.example.com/terminal"
+    # The Terminal Proxy hands this to every client when it issues a ticket, so
+    # a wrong value is a browser-side DNS failure with nothing pointing back
+    # here. It defaulted to the reserved example.com placeholder, which is
+    # syntactically valid and therefore caught by nothing — the terminal-proxy
+    # chart's own guard only fires on an empty value. The platform's own domain
+    # is at least right for the install that forgets to set it.
+    terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.agyn.dev/terminal"
   runnersAuthorizationPolicy:
     enabled: true
     orchestratorServiceAccount:
@@ -218,6 +224,7 @@ postgres:
     identity: identity
     image-proxy: image_proxy
     images: images
+    keycloak: keycloak
     llm: llm
     metering: metering
     networks: networks
@@ -581,6 +588,15 @@ users:
       value: *platformEndpointNats
     - name: GROUP_SYNC_DURABLE
       value: "users-group-sync"
+    # Restricts the one-shot first-admin claim to this verified address, so the
+    # user the bundled Keycloak ships with becomes cluster admin on first
+    # sign-in. Empty lets whoever signs in first take it.
+    #
+    # Must be kept equal to keycloak.adminUser.email. It cannot be derived from
+    # it: this chart pins users 0.5.3, whose service-base (0.1.4) renders env
+    # with toYaml and no tpl, so a value here is taken literally.
+    - name: FIRST_ADMIN_EMAIL
+      value: "admin@agyn.dev"
   resources:
     requests:
       cpu: 10m
@@ -764,6 +780,23 @@ identity:
     limits:
       cpu: 500m
       memory: 256Mi
+
+# Bundled OIDC provider. On by default so an install authenticates without an
+# external issuer being supplied; an install with its own IdP turns it off and
+# points platform.oidc at that instead.
+#
+# externalUrl is the token issuer. It has to be a URL that resolves both in the
+# browser and inside the cluster, because the Gateway fetches discovery from it
+# server-side and zitadel/oidc rejects a document whose issuer differs from the
+# URL it came from.
+keycloak:
+  enabled: true
+  database:
+    host: platform-postgres
+    name: keycloak
+    username: agyn
+    password: agyn
+
 notifications:
   resources:
     requests:

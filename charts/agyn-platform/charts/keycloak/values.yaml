@@ -1,0 +1,238 @@
+nameOverride: ""
+fullnameOverride: keycloak
+
+commonAnnotations: {}
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+image:
+  registry: quay.io
+  repository: keycloak/keycloak
+  tag: "26.4"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+revisionHistoryLimit: 10
+updateStrategy: {}
+deploymentAnnotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  enabled: false
+  fsGroup: null
+
+rbac:
+  create: false
+  clusterWide: false
+  rules: []
+
+priorityClassName: ""
+terminationGracePeriodSeconds: null
+
+# Browser-facing origin, including the port when the ingress is not on 443.
+# The token issuer is derived from it, and every OIDC consumer must be
+# configured with exactly the same string — zitadel/oidc rejects a discovery
+# document whose issuer differs from the URL it was fetched from.
+#
+# Defaults to the bundle VM's own address: agyn.dev is BASE_DOMAIN and 2496 is
+# INGRESS_HOST_PORT, both defaulted the same way in install-platform.sh. An
+# install on another domain or port overrides this and the four origins below.
+externalUrl: https://auth.agyn.dev:2496
+
+realm: agyn
+
+# Redirect targets for the four app clients. Empty entries drop the client, so
+# an install that runs only some of the apps does not carry dead redirect URIs.
+appOrigins:
+  console: https://console.agyn.dev:2496
+  chat: https://chat.agyn.dev:2496
+  tracing: https://tracing.agyn.dev:2496
+  sandboxes: https://sandboxes.agyn.dev:2496
+
+# The user the bundle ships with. Its email is what users.FIRST_ADMIN_EMAIL
+# matches on, and emailVerified must stay true or the claim is refused.
+adminUser:
+  username: admin
+  email: admin@agyn.dev
+  firstName: Local
+  lastName: Admin
+
+database:
+  host: ""
+  port: 5432
+  name: keycloak
+  username: agyn
+  password: agyn
+  # Takes precedence over password when set.
+  existingSecret: ""
+  passwordKey: password
+
+# Passwords for the master-realm bootstrap admin and the agyn-realm admin user.
+auth:
+  existingSecret: ""
+  bootstrapPassword: admin
+  bootstrapPasswordKey: bootstrap-admin-password
+  adminPassword: admin
+  adminPasswordKey: admin-password
+
+# Keycloak re-augments itself on start and writes under /opt/keycloak, so the
+# root filesystem cannot be read-only.
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+command: []
+args:
+  - start
+  - --import-realm
+
+containerPorts:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+  # Health and metrics moved off the HTTP port in Keycloak 25.
+  - name: management
+    containerPort: 9000
+    protocol: TCP
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+
+env:
+  - name: KC_DB
+    value: postgres
+  - name: KC_DB_URL_HOST
+    value: "{{ .Values.database.host }}"
+  - name: KC_DB_URL_PORT
+    value: "{{ .Values.database.port }}"
+  - name: KC_DB_URL_DATABASE
+    value: "{{ .Values.database.name }}"
+  - name: KC_DB_USERNAME
+    value: "{{ .Values.database.username }}"
+  - name: KC_HOSTNAME
+    value: "{{ .Values.externalUrl }}"
+  # Istio terminates TLS, so Keycloak serves plain HTTP and trusts the
+  # forwarded headers for the scheme and port it advertises.
+  - name: KC_HTTP_ENABLED
+    value: "true"
+  - name: KC_PROXY_HEADERS
+    value: xforwarded
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 768Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# First start runs a schema migration and the realm import, so the startup
+# probe is what has to be patient; liveness stays tight.
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /health/started
+    port: management
+  periodSeconds: 5
+  failureThreshold: 60
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /health/ready
+    port: management
+  periodSeconds: 10
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health/live
+    port: management
+  periodSeconds: 30
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+automountServiceAccountToken: false
+
+envFrom: []
+extraEnvVars: []
+extraEnvVarsCM: ""
+extraEnvVarsSecret: ""
+
+configMounts: []
+# Keycloak writes its re-augmented build and transient state here; both stay
+# off the image layer so a restart starts from the same place.
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+
+initContainers: []
+extraContainers: []
+
+lifecycle: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+  metrics: []
+  behavior: {}
+
+pdb:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+ingress:
+  enabled: false
+  ingressClassName: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+metrics:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: ""
+    scrapeTimeout: ""
+    honorLabels: false
+    labels: {}
+    annotations: {}
+    relabelings: []
+    metricRelabelings: []
+    endpoints:
+      - port: management
+        path: /metrics
+        interval: ""
+        scrapeTimeout: ""
