@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.10.7
+version: 0.10.8
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -161,6 +161,12 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.4.0
     condition: tracing-app.enabled
+  # Vendored until sandboxes-app publishes its first chart release, the same
+  # way groups and networks are carried.
+  - name: sandboxes-app
+    repository: file://charts/sandboxes-app
+    version: 0.1.0
+    condition: sandboxes-app.enabled
   - name: redis
     alias: notifications-redis
     repository: https://charts.bitnami.com/bitnami

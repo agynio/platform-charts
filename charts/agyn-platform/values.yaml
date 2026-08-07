@@ -129,6 +129,12 @@ platform:
         service: tracing-app
         port: 8080
         apiToGateway: true
+      # 3000 is the port the app's Service actually publishes.
+      - name: sandboxes-app
+        subdomain: sandboxes
+        service: sandboxes-app
+        port: 3000
+        apiToGateway: true
       - name: llm-proxy
         subdomain: llm
         service: llm-proxy
@@ -907,6 +913,15 @@ chat-app:
       memory: 256Mi
 
 tracing-app:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+sandboxes-app:
   resources:
     requests:
       cpu: 10m
