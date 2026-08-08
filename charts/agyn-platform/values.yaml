@@ -101,6 +101,22 @@ platform:
     create: true
     secretName: secrets-encryption-key
     key: encryptionKey
+  # The platform admin identity's bootstrap token. Generated per install and
+  # held in a Secret rather than rendered into the Gateway's Deployment, so it
+  # is not readable by anyone who can read a workload and survives an upgrade
+  # re-rendering the release.
+  #
+  # create=false is the operator-owned mode a GitOps install uses: reuse reads
+  # the existing Secret, which a renderer without cluster access cannot do, so
+  # it would otherwise mint a new token and rotate the old one out from under
+  # the Gateway. Point secretName at a Secret you manage and create it yourself.
+  bootstrapToken:
+    create: true
+    secretName: &platformBootstrapTokenSecret gateway-bootstrap-token
+    key: &platformBootstrapTokenSecretKey token
+    # The identity the token resolves to. Not a secret, and deliberately a
+    # constant: changing it strands every resource the previous one provisioned.
+    identityId: &platformAdminIdentityId a3c1e9d2-7f4b-5e1a-9c3d-2b8f6a4e7d10
   # Istio routing for the platform's public hostnames.
   ingress:
     enabled: false
@@ -713,6 +729,12 @@ gateway:
     groupsGrpcTarget: *platformEndpointGroups
     networksGrpcTarget: *platformEndpointNetworks
     terminalProxyGrpcTarget: *platformEndpointTerminalProxy
+    # Derived from platform.bootstrapToken, never set here: the token reaches
+    # the Gateway by reference so it stays out of the Deployment spec.
+    clusterAdminIdentityId: *platformAdminIdentityId
+    clusterAdminTokenSecret:
+      name: *platformBootstrapTokenSecret
+      key: *platformBootstrapTokenSecretKey
   resources:
     requests:
       cpu: 20m
