@@ -66,37 +66,42 @@ spec:
 {{- end }}
 {{- end }}
 
-{{- if $declared.runner.enabled }}
+{{- /*
+  The runner and the apps are declared from the same values that deploy them:
+  one flag decides both halves, so a workload cannot be running undeclared and a
+  declaration cannot name a workload this release does not ship.
+*/ -}}
+{{- if .Values.bundledRunner.enabled }}
 ---
 apiVersion: platform.agyn.io/v1alpha1
 kind: Runner
 metadata:
-  name: {{ $declared.runner.name }}
+  name: {{ .Values.bundledRunner.name }}
   namespace: {{ $ns }}
   labels:
 {{- range $k, $v := $labels }}
     {{ $k }}: {{ $v | quote }}
 {{- end }}
 spec:
-  name: {{ $declared.runner.name | quote }}
-  tokenSecretName: {{ $declared.runner.tokenSecretName | quote }}
-{{- with $declared.runner.labels }}
+  name: {{ .Values.bundledRunner.name | quote }}
+  tokenSecretName: {{ .Values.bundledRunner.tokenSecretName | quote }}
+{{- with .Values.bundledRunner.labels }}
   labels:
 {{ toYaml . | indent 4 }}
 {{- end }}
-{{- with $declared.runner.capabilities }}
+{{- with .Values.bundledRunner.capabilities }}
   capabilities:
 {{ toYaml . | indent 4 }}
 {{- end }}
 {{- end }}
 
-{{- range $app := $declared.apps }}
+{{- range $name, $app := .Values.bundledApps }}
 {{- if $app.enabled }}
 ---
 apiVersion: platform.agyn.io/v1alpha1
 kind: App
 metadata:
-  name: {{ $app.name }}
+  name: {{ $app.slug }}
   namespace: {{ $ns }}
   labels:
 {{- range $k, $v := $labels }}
