@@ -150,6 +150,15 @@ platform:
         subdomain: media
         service: media-proxy
         port: 8080
+      # The image proxy, serving the registry API that workload image references
+      # point at. agents-orchestrator rewrites every catalog reference to this
+      # hostname (image-proxy's IMAGE_PROXY_HOST), and the node's container
+      # runtime pulls from it, so without this route every image a user
+      # registers after install fails to pull.
+      - name: registry
+        subdomain: registry
+        service: image-proxy
+        port: 5000
   # Connection details every service reads. The openfga.* block below deploys
   # an instance that satisfies these; point them elsewhere to use a managed one.
   openfga:
