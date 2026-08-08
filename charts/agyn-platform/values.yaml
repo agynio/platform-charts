@@ -54,6 +54,11 @@ platform:
     agents: &platformEndpointAgents "agents:50051"
     runners: &platformEndpointRunners "runners:50051"
     zitiManagement: &platformEndpointZitiManagement "ziti-management:50051"
+    # The ordinary API. Everything that calls the platform as a client -- the
+    # provisioning controller, the runner, the bundled apps -- derives its
+    # target from these rather than naming one of its own.
+    gateway: &platformGatewayAddress "gateway:8080"
+    gatewayUrl: &platformGatewayURL "http://gateway:8080"
     nats: &platformEndpointNats "nats://nats:4222"
   externalUrls:
     # The Terminal Proxy hands this to every client when it issues a ticket, so
@@ -301,7 +306,7 @@ nats:
   # exits without one, and apps, users and agents-orchestrator lose group sync
   # silently rather than failing. Point them at an external NATS by disabling
   # this and overriding the endpoint.
-  enabled: true
+  enabled: false
   fullnameOverride: nats
   # The upstream chart sets no requests at all, which leaves the event bus
   # BestEffort and first in line for eviction. It idles around 25Mi.
@@ -366,7 +371,7 @@ nats:
 # satisfy them. Point platform.openfga elsewhere and disable both to use a
 # managed OpenFGA.
 openfga:
-  enabled: true
+  enabled: false
   fullnameOverride: openfga
   replicaCount: 1
   datastore:
@@ -394,7 +399,7 @@ openfga:
       memory: 256Mi
 
 openfga-db:
-  enabled: true
+  enabled: false
   fullnameOverride: openfga-db
   postgres:
     database: openfga
@@ -422,7 +427,7 @@ openfga-db:
 # Object storage backing the files service. s3.* is the connection contract;
 # this block deploys the instance that satisfies it.
 minio:
-  enabled: true
+  enabled: false
   fullnameOverride: minio
   mode: standalone
   replicas: 1
@@ -828,7 +833,7 @@ identity:
 # server-side and zitadel/oidc rejects a document whose issuer differs from the
 # URL it came from.
 keycloak:
-  enabled: true
+  enabled: false
   database:
     host: platform-postgres
     name: keycloak
@@ -1015,7 +1020,7 @@ sandboxes-app:
 platform-controller:
   enabled: true
   gateway:
-    url: http://gateway:8080
+    url: *platformGatewayURL
   zitiManagement:
     target: http://ziti-management:50051
   bootstrapToken:
@@ -1064,38 +1069,6 @@ provisioning:
       type: agent_runtime
       repository: ghcr.io/agynio/agyn-runtime-agn
       visibility: public
-
-  # The runner that executes agent workloads. Cluster-scoped, and version
-  # locked to this release -- that is the intended relationship for a
-  # component the platform ships. A third-party runner is registered through
-  # the API and deployed on its own schedule.
-  runner:
-    enabled: true
-    name: k8s-runner
-    labels:
-      type: kubernetes
-    capabilities:
-      - docker
-    # The Secret the controller writes the service token into, and the one the
-    # runner mounts. On a first install the runner may start before it exists
-    # and retry until it does.
-    tokenSecretName: k8s-runner-service-token
-
-  # The apps bundled with this release. The slug is not cosmetic: it names the
-  # app's OpenZiti service, which is the name the app binds on.
-  apps:
-    - name: reminders
-      enabled: true
-      slug: reminders
-      displayName: Reminders
-      visibility: internal
-      tokenSecretName: reminders-service-token
-    - name: telegram
-      enabled: false
-      slug: telegram
-      displayName: Telegram Connector
-      visibility: internal
-      tokenSecretName: telegram-connector-service-token
 
   # The platform's baseline overlay connectivity. OpenZiti denies by default,
   # so a missing policy makes a service invisible rather than refused. Written
@@ -1164,3 +1137,144 @@ provisioning:
         type: Dial
         identityRoles: ["#llm-native-openai"]
         serviceRoles: ["@llm-intercept-openai"]
+
+# ---------------------------------------------------------------------------
+# The workload layer: the runner that executes agent workloads and the apps
+# bundled with this release.
+#
+# One flag per component decides both halves — whether the workload is deployed
+# and whether the release declares it — because they are the same decision. Each
+# mounts a service token the provisioning controller writes into the Secret
+# named here; on a first install the workload may start before that Secret
+# exists and retry until it does.
+#
+# Overrides go in extraEnvVars, which the service charts append to their own
+# env rather than replacing it, so nothing here re-declares an entry it does not
+# mean to change.
+# ---------------------------------------------------------------------------
+bundledRunner:
+  enabled: true
+  name: k8s-runner
+  labels:
+    type: kubernetes
+  capabilities:
+    - docker
+  tokenSecretName: &bundledRunnerTokenSecret k8s-runner-service-token
+
+bundledApps:
+  reminders:
+    enabled: true
+    # Not cosmetic: this names the app's OpenZiti service, which is the name the
+    # app binds on.
+    slug: reminders
+    displayName: Reminders
+    visibility: internal
+    tokenSecretName: &remindersTokenSecret reminders-service-token
+  telegramConnector:
+    enabled: false
+    slug: telegram
+    displayName: Telegram Connector
+    visibility: internal
+    tokenSecretName: &telegramTokenSecret telegram-connector-service-token
+
+# Each of these sets `env` in full rather than appending to the subchart's list.
+# That is not the interface we want -- an operator should not re-declare entries
+# they never meant to change -- but it is the only correct one these charts
+# offer today: `extraEnvVars` is concatenated after `env`, and a later duplicate
+# only wins until the first upgrade. Helm patches `env` by name, and the merge
+# reorders the pair so the chart default silently takes over. Deriving these
+# needs the service charts to expose the three values as their own keys.
+k8s-runner:
+  env:
+    - name: GRPC_ADDR
+      value: 0.0.0.0:50051
+    - name: KUBE_NAMESPACE
+      value: agyn-workloads
+    - name: PVC_STORAGE_SIZE
+      value: 10Gi
+    - name: ZITI_ENABLED
+      value: "true"
+    - name: GATEWAY_ADDRESS
+      value: *platformGatewayAddress
+    - name: CAPABILITY_IMPLEMENTATIONS
+      value: '{"docker":"rootless"}'
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: *bundledRunnerTokenSecret
+          key: token
+    - name: ZITI_ENROLLMENT_TIMEOUT
+      value: 2m
+    - name: LOG_LEVEL
+      value: info
+  rbac:
+    clusterWide: true
+  securityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 100
+    runAsGroup: 101
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
+reminders:
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: reminders
+    - name: ZITI_IDENTITY_FILE
+      value: /ziti/identity.json
+    - name: ZITI_SERVICE_NAME
+      value: app-reminders
+    - name: GATEWAY_SERVICE_NAME
+      value: gateway
+    - name: GATEWAY_URL
+      value: *platformGatewayURL
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: *remindersTokenSecret
+          key: token
+
+telegram-connector:
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: telegram-connector
+    - name: ZITI_IDENTITY_FILE
+      value: /ziti/identity.json
+    - name: ZITI_SERVICE_NAME
+      value: app-telegram
+    - name: GATEWAY_SERVICE_NAME
+      value: gateway
+    - name: GATEWAY_URL
+      value: *platformGatewayURL
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: *telegramTokenSecret
+          key: token
+    # The app's own id, stored beside its token by the controller: CreateApp is
+    # the only place it is ever returned, and the connector exits without one.
+    - name: APP_ID
+      valueFrom:
+        secretKeyRef:
+          name: *telegramTokenSecret
+          key: app_id
+    - name: TELEGRAM_BASE_URL
+      value: https://api.telegram.org
+    - name: TELEGRAM_POLL_TIMEOUT
+      value: "25s"
