@@ -1,23 +1,11 @@
 apiVersion: v2
 name: agyn-apps
-description: Umbrella chart for Agyn apps and the default runner.
+description: DEPRECATED - the runner and the apps ship in agyn-platform.
 type: application
-version: 0.1.4
+version: 0.2.0
 appVersion: "0.1.1"
 home: https://github.com/agynio/platform-charts
 sources:
   - https://github.com/agynio/platform-charts
 kubeVersion: ">=1.26.0-0"
-dependencies:
-  - name: reminders
-    repository: oci://ghcr.io/agynio/charts
-    version: 0.2.5
-    condition: apps.reminders.enabled
-  - name: telegram-connector
-    repository: oci://ghcr.io/agynio/charts
-    version: 0.1.5
-    condition: apps.telegramConnector.enabled
-  - name: k8s-runner
-    repository: oci://ghcr.io/agynio/charts
-    version: 0.10.18
-    condition: runners.k8s.enabled
+deprecated: true

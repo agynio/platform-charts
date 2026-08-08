@@ -1,0 +1,12 @@
+agyn-apps is deprecated and renders nothing.
+
+The runner and the bundled apps ship in agyn-platform. They shipped separately
+only because they mount a service token that used to require a person between
+two installs; the provisioning controller writes it now.
+
+Move to agyn-platform and remove this release:
+
+  helm uninstall agyn-apps -n <namespace>
+
+Their workloads come back with the platform release, along with the
+declarations that register them.
