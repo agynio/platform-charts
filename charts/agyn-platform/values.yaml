@@ -1085,6 +1085,16 @@ provisioning:
         type: Dial
         identityRoles: ["#orchestrators"]
         serviceRoles: ["#runner-services"]
+      # Reaching a runner in another network is only possible over the overlay,
+      # so both of these dial runner services directly.
+      - name: terminal-proxy-dial-runners
+        type: Dial
+        identityRoles: ["#terminal-proxy-hosts"]
+        serviceRoles: ["#runner-services"]
+      - name: runners-service-dial-runners
+        type: Dial
+        identityRoles: ["#runners-service-hosts"]
+        serviceRoles: ["#runner-services"]
       - name: gateway-bind
         type: Bind
         identityRoles: ["#gateway-hosts"]
