@@ -12,10 +12,10 @@ dependencies:
   # Reconciles the resources this release declares the platform should contain.
   # Carries the custom resource definitions those declarations are written
   # against, so the kinds are established by the same release that uses them.
-  - name: provisioning
+  - name: platform-controller
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.0
-    condition: provisioning.enabled
+    condition: platform-controller.enabled
   # Optional in-cluster database, so the umbrella can stand up a working
   # platform on its own. Production points platform.database at a managed
   # instance and leaves this disabled.
