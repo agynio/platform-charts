@@ -1,0 +1,134 @@
+{{- if .Values.provisioning.enabled }}
+{{- $ns := .Release.Namespace -}}
+{{- $labels := dict "app.kubernetes.io/name" (include "agyn-platform.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
+{{- $declared := .Values.provisioning.declarations -}}
+{{- /*
+  What this release declares the platform should contain. Nothing here is
+  sequenced: an object that cannot be reconciled yet is retried until it can be,
+  so the release applies these and returns rather than waiting for a platform it
+  is still starting.
+*/ -}}
+apiVersion: platform.agyn.io/v1alpha1
+kind: Organization
+metadata:
+  name: system
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  slug: {{ $declared.systemOrganization.slug | quote }}
+  name: {{ $declared.systemOrganization.name | quote }}
+
+{{- range $admin := $declared.clusterAdmins }}
+---
+# Pending until this person first signs in: there is no account to grant against
+# before then. Removing this declaration revokes the role.
+apiVersion: platform.agyn.io/v1alpha1
+kind: ClusterAdmin
+metadata:
+  name: {{ printf "admin-%s" (sha256sum $admin.address | trunc 12) }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  address: {{ $admin.address | quote }}
+{{- end }}
+
+{{- range $image := $declared.images }}
+---
+apiVersion: platform.agyn.io/v1alpha1
+kind: Image
+metadata:
+  name: {{ $image.name }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  organizationRef:
+    name: system
+  name: {{ $image.name | quote }}
+  description: {{ $image.description | default "" | quote }}
+  type: {{ $image.type | quote }}
+  repository: {{ $image.repository | quote }}
+  visibility: {{ $image.visibility | default "public" | quote }}
+{{- with $image.tagFilter }}
+  tagFilter: {{ . | quote }}
+{{- end }}
+{{- with $image.credentialsSecretName }}
+  credentialsSecretRef:
+    name: {{ . | quote }}
+{{- end }}
+{{- end }}
+
+{{- if $declared.runner.enabled }}
+---
+apiVersion: platform.agyn.io/v1alpha1
+kind: Runner
+metadata:
+  name: {{ $declared.runner.name }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  name: {{ $declared.runner.name | quote }}
+  tokenSecretName: {{ $declared.runner.tokenSecretName | quote }}
+{{- with $declared.runner.labels }}
+  labels:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- with $declared.runner.capabilities }}
+  capabilities:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- end }}
+
+{{- range $app := $declared.apps }}
+{{- if $app.enabled }}
+---
+apiVersion: platform.agyn.io/v1alpha1
+kind: App
+metadata:
+  name: {{ $app.name }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  organizationRef:
+    name: system
+  slug: {{ $app.slug | quote }}
+  name: {{ $app.displayName | quote }}
+  visibility: {{ $app.visibility | default "internal" | quote }}
+  tokenSecretName: {{ $app.tokenSecretName | quote }}
+{{- with $app.permissions }}
+  permissions:
+{{ toYaml . | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if $declared.overlayPolicies.enabled }}
+---
+apiVersion: platform.agyn.io/v1alpha1
+kind: OverlayPolicy
+metadata:
+  name: baseline
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+spec:
+  policies:
+{{ toYaml $declared.overlayPolicies.policies | indent 4 }}
+{{- end }}
+{{- end }}

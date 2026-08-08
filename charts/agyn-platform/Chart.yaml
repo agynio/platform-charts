@@ -2,13 +2,20 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.16.0
+version: 0.17.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
   - https://github.com/agynio/platform-charts
 kubeVersion: ">=1.26.0-0"
 dependencies:
+  # Reconciles the resources this release declares the platform should contain.
+  # Carries the custom resource definitions those declarations are written
+  # against, so the kinds are established by the same release that uses them.
+  - name: provisioning
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: provisioning.enabled
   # Optional in-cluster database, so the umbrella can stand up a working
   # platform on its own. Production points platform.database at a managed
   # instance and leaves this disabled.
