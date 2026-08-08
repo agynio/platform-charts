@@ -1,7 +1,7 @@
-{{- if .Values.provisioning.enabled }}
+{{- if (index .Values "platform-controller").enabled }}
 {{- $ns := .Release.Namespace -}}
 {{- $labels := dict "app.kubernetes.io/name" (include "agyn-platform.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
-{{- $declared := .Values.provisioning.declarations -}}
+{{- $declared := .Values.provisioning -}}
 {{- /*
   What this release declares the platform should contain. Nothing here is
   sequenced: an object that cannot be reconciled yet is retried until it can be,
