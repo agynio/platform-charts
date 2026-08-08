@@ -35,6 +35,9 @@ rules:
   - apiGroups: [""]
     resources: ["services"]
     verbs: ["get", "patch"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["gateways"]
+    verbs: ["get", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -135,6 +138,22 @@ spec:
                 echo "[wiring] publishing $PORT on $SVC"
                 kubectl -n "$SNS" patch svc "$SVC" --type=json \
                   -p "[{\"op\":\"add\",\"path\":\"/spec/ports/-\",\"value\":{\"name\":\"https-hostport\",\"port\":$PORT,\"protocol\":\"TCP\",\"targetPort\":{{ $w.ingressHostPort.targetPort }}}}]"
+              fi
+              {{- end }}
+
+              {{- if $w.gatewayHost.enabled }}
+              # One Gateway, one TLS filter chain. A host on a Gateway of its
+              # own is unreachable over a coalesced connection opened for a
+              # sibling, which is every request a browser makes after the first.
+              GW={{ .Values.routing.gateway.name }}
+              GNS={{ .Values.routing.gateway.namespace }}
+              if kubectl -n "$GNS" get gateway "$GW" \
+                   -o jsonpath='{.spec.servers[0].hosts}' | grep -qF '"{{ $host }}"'; then
+                echo "[wiring] $GW already serves {{ $host }}"
+              else
+                echo "[wiring] adding {{ $host }} to gateway/$GW"
+                kubectl -n "$GNS" patch gateway "$GW" --type=json \
+                  -p '[{"op":"add","path":"/spec/servers/0/hosts/-","value":"{{ $host }}"}]'
               fi
               {{- end }}
               echo "[wiring] done"

@@ -53,16 +53,22 @@ realm: agyn
 # the hostname resolves everywhere, the port is 443, and the issuer's cert is
 # already trusted. Turn the pieces off individually there.
 routing:
-  # Istio Gateway + VirtualService for the auth hostname. Its own Gateway rather
-  # than a host on the platform's: two Gateways may share a port and selector as
-  # long as their hosts do not overlap, and a chart must not edit a resource it
-  # does not own.
+  # VirtualService for the auth hostname, bound to the platform's existing
+  # Gateway.
+  #
+  # NOT a Gateway of its own, though Istio permits it: it selects a filter chain
+  # by SNI, and a browser holding a wildcard certificate coalesces every
+  # *.domain host onto one connection. A request for the auth host then arrives
+  # with a sibling's SNI, lands in that Gateway's chain, finds no route and 404s
+  # -- whichever host the browser opened first works and the rest break.
+  #
+  # The host is added to the existing Gateway's server list by the wiring Job,
+  # since that resource belongs to another release.
   enabled: false
   host: ""
-  gatewaySelector:
-    istio: ingressgateway
-  tlsSecret: wildcard-agyn-dev-tls
-  gatewayNamespace: istio-gateway
+  gateway:
+    name: platform-gateway
+    namespace: istio-gateway
 
 # One Job for the cluster wiring a chart cannot express as a template. It runs
 # BEFORE the release, so the port, the DNS name and the CA are in place by the
@@ -101,6 +107,10 @@ wiring:
     service: istio-ingressgateway
     namespace: istio-gateway
     targetPort: 443
+  # Adds the auth hostname to the platform Gateway's server list, so it shares
+  # the one TLS filter chain with every sibling host.
+  gatewayHost:
+    enabled: false
 
 # Redirect targets for the four app clients. Empty entries drop the client, so
 # an install that runs only some of the apps does not carry dead redirect URIs.

@@ -2,7 +2,7 @@ apiVersion: v2
 name: keycloak
 description: Bundled Keycloak OIDC provider, with the agyn realm imported declaratively.
 type: application
-version: 0.2.1
+version: 0.2.2
 appVersion: "26.4"
 home: https://github.com/agynio/platform-charts
 sources:
