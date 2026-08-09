@@ -4,6 +4,12 @@ contractConfigMaps:
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  # No global.ingress here yet. service-base 0.1.5 templates env values so a
+  # subchart can derive its own hostnames from one domain -- agents-orchestrator
+  # already builds IMAGE_PROXY_HOST that way -- but 19 of the 36 charts this
+  # umbrella pulls still embed service-base 0.1.4, whose schema declares global
+  # additionalProperties:false. Setting it fails their render, so the domain
+  # stays per-service until those charts are released against 0.1.5.
 
 validation:
   requireExistingSecrets: false
@@ -311,7 +317,7 @@ nats:
   # exits without one, and apps, users and agents-orchestrator lose group sync
   # silently rather than failing. Point them at an external NATS by disabling
   # this and overriding the endpoint.
-  enabled: false
+  enabled: true
   fullnameOverride: nats
   # The upstream chart sets no requests at all, which leaves the event bus
   # BestEffort and first in line for eviction. It idles around 25Mi.
@@ -376,7 +382,9 @@ nats:
 # satisfy them. Point platform.openfga elsewhere and disable both to use a
 # managed OpenFGA.
 openfga:
-  enabled: false
+  # On by default: authorization is not optional, and every install that does
+  # not bring a managed OpenFGA needs this one to have a platform at all.
+  enabled: true
   fullnameOverride: openfga
   replicaCount: 1
   datastore:
@@ -409,7 +417,9 @@ openfga:
 # Object storage backing the files service. s3.* is the connection contract;
 # this block deploys the instance that satisfies it.
 minio:
-  enabled: false
+  # On by default: the files service has no other backing store, so an install
+  # that names nothing still gets a working one.
+  enabled: true
   fullnameOverride: minio
   mode: standalone
   replicas: 1
@@ -649,13 +659,10 @@ apps:
       memory: 256Mi
 
 agents-orchestrator:
-  env:
-    - name: GROUP_SYNC_ENABLED
-      value: "true"
-    - name: GROUPS_ADDRESS
-      value: *platformEndpointGroups
-    - name: NATS_URL
-      value: *platformEndpointNats
+  # No env here. Setting it replaces the subchart's list rather than adding to
+  # it, and these three were all it named -- which dropped the overlay wiring,
+  # the workload init images and eight defaults that then reached no install at
+  # all. The subchart carries them, so the umbrella says nothing.
   resources:
     requests:
       cpu: 10m
