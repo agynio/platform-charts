@@ -1076,6 +1076,13 @@ provisioning:
       type: agent_runtime
       repository: ghcr.io/agynio/agyn-runtime-agn
       visibility: public
+    # The setup wizard attaches this one, so it ships rather than being
+    # registered by hand before a first agent can read an attachment.
+    - name: files-mcp
+      description: Lets an agent read files sent to it in a conversation.
+      type: mcp
+      repository: ghcr.io/agynio/files-mcp
+      visibility: public
 
   # The platform's baseline overlay connectivity. OpenZiti denies by default,
   # so a missing policy makes a service invisible rather than refused. Written
