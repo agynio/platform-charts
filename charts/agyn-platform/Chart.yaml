@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.24.0
+version: 0.25.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -44,7 +44,7 @@ dependencies:
     condition: postgres.enabled
   - name: metering
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.5
+    version: 0.2.0
     condition: metering.enabled
   # Authorization store and its database. Optional for the same reason as
   # postgres: an operator with a managed OpenFGA points platform.openfga at it.
@@ -82,11 +82,11 @@ dependencies:
     condition: image-proxy.enabled
   - name: agents
     repository: oci://ghcr.io/agynio/charts
-    version: 0.9.0
+    version: 0.10.0
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.15.2
+    version: 0.16.1
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
@@ -137,7 +137,7 @@ dependencies:
     condition: runners.enabled
   - name: ziti-management
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.19
+    version: 0.11.0
     condition: ziti-management.enabled
   - name: expose
     repository: oci://ghcr.io/agynio/charts
@@ -145,15 +145,15 @@ dependencies:
     condition: expose.enabled
   - name: secrets
     repository: oci://ghcr.io/agynio/charts
-    version: 0.3.0
+    version: 0.4.0
     condition: secrets.enabled
   - name: llm
     repository: oci://ghcr.io/agynio/charts
-    version: 0.4.5
+    version: 0.5.0
     condition: llm.enabled
   - name: llm-proxy
     repository: oci://ghcr.io/agynio/charts
-    version: 0.12.9
+    version: 0.13.0
     condition: llm-proxy.enabled
   # Vendored until terminal-proxy publishes its first chart release, the same
   # way groups and networks are carried.
@@ -167,7 +167,7 @@ dependencies:
     condition: tracing.enabled
   - name: notifications
     repository: oci://ghcr.io/agynio/charts
-    version: 0.2.12
+    version: 0.3.0
     condition: notifications.enabled
   - name: nats
     repository: https://nats-io.github.io/k8s/helm/charts/
@@ -187,11 +187,11 @@ dependencies:
     condition: chat-app.enabled
   - name: console-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.16.1
+    version: 0.17.0
     condition: console-app.enabled
   - name: tracing-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.5.1
+    version: 0.6.0
     condition: tracing-app.enabled
   - name: sandboxes-app
     repository: oci://ghcr.io/agynio/charts
