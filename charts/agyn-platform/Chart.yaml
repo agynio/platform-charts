@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.35.0
+version: 0.36.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -86,11 +86,11 @@ dependencies:
     condition: image-proxy.enabled
   - name: agents
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.0
+    version: 0.11.0
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.17.2
+    version: 0.17.3
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
