@@ -7,8 +7,15 @@ The charts compose service charts published under `oci://ghcr.io/agynio/charts`.
 
 | Chart | Purpose |
 | --- | --- |
-| `charts/agyn-platform` | Deploys the core platform services as one umbrella chart. |
-| `charts/agyn-apps` | Deploys optional apps plus the default Kubernetes runner. |
+| `charts/agyn-platform` | The platform: control plane, workload layer, provisioning and its declarations. One release. |
+| `charts/agyn-apps` | Deprecated. Renders nothing — the runner and the apps ship in `agyn-platform`. |
+
+The platform installs as **one Helm chart**: one release, one version, one set
+of values, and no operator step in the middle. The two charts existed because
+the runner and the bundled apps mount a service token only the running platform
+can mint, so installing them required a person to register each component
+between the two installs and copy a credential out of the Console. Provisioning
+removes that step, and with it the reason for the split.
 
 ## Repository layout
 

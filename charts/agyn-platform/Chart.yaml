@@ -9,6 +9,24 @@ sources:
   - https://github.com/agynio/platform-charts
 kubeVersion: ">=1.26.0-0"
 dependencies:
+  # The workload layer: the runner that executes agent workloads and the apps
+  # bundled with this release. Version-locked to the release, which is the
+  # intended relationship for components the platform ships -- a third-party
+  # runner or app is registered through the API and deployed on its own
+  # schedule. They shipped as a second chart only because they mount a service
+  # token that used to require a human between two installs.
+  - name: k8s-runner
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.10.15
+    condition: bundledRunner.enabled
+  - name: reminders
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.2.5
+    condition: bundledApps.reminders.enabled
+  - name: telegram-connector
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.5
+    condition: bundledApps.telegramConnector.enabled
   # Reconciles the resources this release declares the platform should contain.
   # Carries the custom resource definitions those declarations are written
   # against, so the kinds are established by the same release that uses them.
