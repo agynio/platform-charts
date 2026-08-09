@@ -1000,3 +1000,167 @@ sandboxes-app:
     limits:
       cpu: 500m
       memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Provisioning: what this release declares the platform should contain.
+#
+# Rendered into the objects the provisioning controller reconciles, so what a
+# release provisions is a property of these values rather than of the binary
+# that applies them. This is the one tier an operator must fill in: a release
+# that declares no cluster administrator installs a platform nobody can
+# administer.
+# ---------------------------------------------------------------------------
+# The controller that reconciles the declarations below, and the custom
+# resource definitions they are written against.
+platform-controller:
+  enabled: true
+  gateway:
+    url: http://gateway:8080
+  zitiManagement:
+    target: http://ziti-management:50051
+  bootstrapToken:
+    secretName: *platformBootstrapTokenSecret
+    key: *platformBootstrapTokenSecretKey
+
+# What this release declares the platform should contain.
+provisioning:
+  # The organization platform-provisioned resources live in. Its slug is
+  # cluster-wide unique and user-visible -- it appears in image references and
+  # app addresses -- so it is a deliberate choice rather than an
+  # implementation detail.
+  systemOrganization:
+    slug: agyn-platform
+    name: Agyn Platform
+
+  # Who administers this cluster, by the address their identity provider
+  # asserts. Nobody is granted the role for signing in first, so an install
+  # that names none has none. Each entry is granted once that account exists,
+  # and removing one revokes the role.
+  clusterAdmins: []
+  # - address: operator@example.com
+
+  # Registered public, which is what makes them usable from every organization
+  # on the platform. An environment names a workspace image and an agent
+  # runtime image, so a fresh platform ships one of each kind that is usable
+  # without registering anything by hand.
+  images:
+    - name: devcontainer
+      description: Default workspace image.
+      type: workspace
+      repository: ghcr.io/agynio/devcontainer
+      visibility: public
+    - name: codex
+      description: Codex agent runtime.
+      type: agent_runtime
+      repository: ghcr.io/agynio/agyn-runtime-codex
+      visibility: public
+    - name: claude
+      description: Claude Code agent runtime.
+      type: agent_runtime
+      repository: ghcr.io/agynio/agyn-runtime-claude
+      visibility: public
+    - name: agn
+      description: agn agent runtime.
+      type: agent_runtime
+      repository: ghcr.io/agynio/agyn-runtime-agn
+      visibility: public
+
+  # The runner that executes agent workloads. Cluster-scoped, and version
+  # locked to this release -- that is the intended relationship for a
+  # component the platform ships. A third-party runner is registered through
+  # the API and deployed on its own schedule.
+  runner:
+    enabled: true
+    name: k8s-runner
+    labels:
+      type: kubernetes
+    capabilities:
+      - docker
+    # The Secret the controller writes the service token into, and the one the
+    # runner mounts. On a first install the runner may start before it exists
+    # and retry until it does.
+    tokenSecretName: k8s-runner-service-token
+
+  # The apps bundled with this release. The slug is not cosmetic: it names the
+  # app's OpenZiti service, which is the name the app binds on.
+  apps:
+    - name: reminders
+      enabled: true
+      slug: reminders
+      displayName: Reminders
+      visibility: internal
+      tokenSecretName: reminders-service-token
+    - name: telegram
+      enabled: false
+      slug: telegram
+      displayName: Telegram Connector
+      visibility: internal
+      tokenSecretName: telegram-connector-service-token
+
+  # The platform's baseline overlay connectivity. OpenZiti denies by default,
+  # so a missing policy makes a service invisible rather than refused. Written
+  # against role attributes rather than named services, so a rule covers every
+  # runner and app registered later.
+  overlayPolicies:
+    enabled: true
+    policies:
+      - name: agents-dial-gateway
+        type: Dial
+        identityRoles: ["#agents"]
+        serviceRoles: ["@gateway"]
+      - name: orchestrators-dial-runners
+        type: Dial
+        identityRoles: ["#orchestrators"]
+        serviceRoles: ["#runner-services"]
+      - name: gateway-bind
+        type: Bind
+        identityRoles: ["#gateway-hosts"]
+        serviceRoles: ["@gateway"]
+      - name: runners-bind
+        type: Bind
+        identityRoles: ["#runners"]
+        serviceRoles: ["#runner-services"]
+      - name: agents-dial-llm-proxy
+        type: Dial
+        identityRoles: ["#agents"]
+        serviceRoles: ["@llm-proxy"]
+      - name: llm-proxy-bind
+        type: Bind
+        identityRoles: ["#llm-proxy-hosts"]
+        serviceRoles: ["@llm-proxy"]
+      - name: agents-dial-tracing
+        type: Dial
+        identityRoles: ["#agents"]
+        serviceRoles: ["@tracing"]
+      - name: tracing-bind
+        type: Bind
+        identityRoles: ["#tracing-hosts"]
+        serviceRoles: ["@tracing"]
+      - name: apps-dial-gateway
+        type: Dial
+        identityRoles: ["#apps"]
+        serviceRoles: ["@gateway"]
+      - name: apps-bind
+        type: Bind
+        identityRoles: ["#apps"]
+        serviceRoles: ["#app-services"]
+      - name: gateway-dial-apps
+        type: Dial
+        identityRoles: ["#gateway-hosts"]
+        serviceRoles: ["#app-services"]
+      - name: egress-gateway-bind
+        type: Bind
+        identityRoles: ["#egress-gateway-hosts"]
+        serviceRoles: ["#egress-services"]
+      - name: llm-proxy-bind-intercept
+        type: Bind
+        identityRoles: ["#llm-proxy-hosts"]
+        serviceRoles: ["#llm-intercept-services"]
+      - name: native-anthropic-dial
+        type: Dial
+        identityRoles: ["#llm-native-anthropic"]
+        serviceRoles: ["@llm-intercept-anthropic"]
+      - name: native-openai-dial
+        type: Dial
+        identityRoles: ["#llm-native-openai"]
+        serviceRoles: ["@llm-intercept-openai"]
