@@ -1212,10 +1212,12 @@ bundledApps:
     visibility: public
     tokenSecretName: &remindersTokenSecret reminders-service-token
   telegramConnector:
-    enabled: false
+    enabled: true
     slug: telegram
     displayName: Telegram Connector
-    visibility: internal
+    # Public for the same reason the reminders app is: it belongs to the system
+    # organization, and the catalog only offers public apps to the others.
+    visibility: public
     tokenSecretName: &telegramTokenSecret telegram-connector-service-token
 
 # Each of these sets `env` in full rather than appending to the subchart's list.
