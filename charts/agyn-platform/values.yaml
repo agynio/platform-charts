@@ -1100,17 +1100,17 @@ provisioning:
       - name: gateway
         roleAttributes: [gateway]
         intercept:
-          addresses: [gateway.ziti]
+          addresses: [gateway.agyn]
           portRanges: [{low: 443, high: 443}]
       - name: llm-proxy
         roleAttributes: [llm-proxy]
         intercept:
-          addresses: [llm-proxy.ziti]
+          addresses: [llm-proxy.agyn]
           portRanges: [{low: 80, high: 80}]
       - name: tracing
         roleAttributes: [tracing]
         intercept:
-          addresses: [tracing.ziti]
+          addresses: [tracing.agyn]
           portRanges: [{low: 443, high: 443}]
       # One per vendor, static: the vendor set is closed, so nothing is
       # provisioned per organization, environment or attachment. What varies per
