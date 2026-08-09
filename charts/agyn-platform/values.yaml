@@ -820,6 +820,17 @@ chat:
       cpu: 500m
       memory: 256Mi
 identity:
+  # Identity owns the platform admin identity: it registers the record and
+  # grants it admin on cluster:global at its own startup. Without this the
+  # provisioning controller authenticates and then fails every call, because
+  # nothing has made it a cluster admin.
+  #
+  # extraEnvVars rather than env: this adds a variable the chart does not set,
+  # so it appends cleanly instead of overriding an entry Helm would later
+  # reorder.
+  extraEnvVars:
+    - name: PLATFORM_IDENTITY_ID
+      value: *platformAdminIdentityId
   resources:
     requests:
       cpu: 10m
