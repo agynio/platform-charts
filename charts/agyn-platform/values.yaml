@@ -1034,8 +1034,11 @@ provisioning:
   # asserts. Nobody is granted the role for signing in first, so an install
   # that names none has none. Each entry is granted once that account exists,
   # and removing one revokes the role.
-  clusterAdmins: []
-  # - address: operator@example.com
+  # The user the bundled Keycloak ships with, so the bundle has an administrator
+  # by declaration rather than by whoever races to sign in first. Keep equal to
+  # keycloak.adminUser.email.
+  clusterAdmins:
+    - address: admin@agyn.dev
 
   # Registered public, which is what makes them usable from every organization
   # on the platform. An environment names a workspace image and an agent
@@ -1204,7 +1207,9 @@ bundledApps:
     # app binds on.
     slug: reminders
     displayName: Reminders
-    visibility: internal
+    # Public for the same reason the bundled images are: it belongs to the system
+    # organization, and the catalog only offers public apps to the others.
+    visibility: public
     tokenSecretName: &remindersTokenSecret reminders-service-token
   telegramConnector:
     enabled: false
@@ -1221,9 +1226,14 @@ bundledApps:
 # reorders the pair so the chart default silently takes over. Deriving these
 # needs the service charts to expose the three values as their own keys.
 k8s-runner:
+  # This list replaces the chart's rather than merging with it, so every entry
+  # the runner needs has to be repeated here -- CATALOG_PATH went missing that
+  # way and the runner reported no flavors.
   env:
     - name: GRPC_ADDR
       value: 0.0.0.0:50051
+    - name: CATALOG_PATH
+      value: /etc/agyn/runner-catalog/catalog.yaml
     - name: KUBE_NAMESPACE
       value: agyn-workloads
     - name: PVC_STORAGE_SIZE
