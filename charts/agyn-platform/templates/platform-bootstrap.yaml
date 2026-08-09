@@ -71,6 +71,38 @@ stringData:
 ---
 {{- end }}
 
+{{- if .Values.platform.bootstrapToken.create }}
+{{- $secretName := .Values.platform.bootstrapToken.secretName -}}
+{{- $key := .Values.platform.bootstrapToken.key -}}
+{{- /*
+  Reused on upgrade for the same reason as the encryption key above: a new token
+  would be rendered into the Gateway while every holder of the old one -- the
+  provisioning controller, `agyn local` -- keeps presenting it.
+*/ -}}
+{{- $existing := lookup "v1" "Secret" $ns $secretName -}}
+{{- $value := "" -}}
+{{- if and $existing $existing.data (index $existing.data $key) -}}
+{{- $value = index $existing.data $key | b64dec -}}
+{{- else -}}
+{{- $value = randAlphaNum 48 -}}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ $ns }}
+  labels:
+{{- range $k, $v := $labels }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+  {{ $key }}: {{ $value | quote }}
+---
+{{- end }}
+
 {{- if and .Values.minio.enabled .Values.s3.createSecret }}
 # Credentials for the bundled object storage, taken from the same values the
 # minio subchart is configured with so the two cannot drift apart.
