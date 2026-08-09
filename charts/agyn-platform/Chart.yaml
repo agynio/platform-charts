@@ -70,7 +70,7 @@ dependencies:
     condition: gateway.enabled
   - name: terminal-proxy
     repository: oci://ghcr.io/agynio/charts
-    version: 0.6.2
+    version: 0.6.3
     condition: terminal-proxy.enabled
   - name: images
     repository: oci://ghcr.io/agynio/charts
@@ -86,7 +86,7 @@ dependencies:
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.16.2
+    version: 0.16.3
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts

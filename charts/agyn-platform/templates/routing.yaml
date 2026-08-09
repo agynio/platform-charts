@@ -1,6 +1,9 @@
 {{- if .Values.platform.ingress.enabled -}}
 {{- $ing := .Values.platform.ingress -}}
-{{- $domain := required "platform.ingress.baseDomain is required when platform.ingress.enabled is true" $ing.baseDomain -}}
+{{/* global first: subcharts read global.ingress.baseDomain to derive their own
+     hostnames, so an install that sets both and lets them disagree routes to one
+     domain while its workloads pull from another. */}}
+{{- $domain := required "platform.ingress.baseDomain (or global.ingress.baseDomain) is required when platform.ingress.enabled is true" (default $ing.baseDomain ((.Values.global.ingress | default dict).baseDomain)) -}}
 {{- $ns := .Release.Namespace -}}
 {{- $gwNs := $ing.gateway.namespace | default .Release.Namespace -}}
 {{- $labels := dict "app.kubernetes.io/name" (include "agyn-platform.name" .) "app.kubernetes.io/instance" .Release.Name "app.kubernetes.io/managed-by" .Release.Service -}}
