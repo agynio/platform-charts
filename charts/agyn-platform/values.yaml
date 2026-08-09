@@ -260,6 +260,7 @@ postgres:
     image-proxy: image_proxy
     images: images
     keycloak: keycloak
+    openfga: openfga
     llm: llm
     metering: metering
     networks: networks
@@ -380,7 +381,9 @@ openfga:
   replicaCount: 1
   datastore:
     engine: postgres
-    uri: postgresql://openfga:openfga@openfga-db:5432/openfga?sslmode=disable
+    # The instance this release already runs. The uri names a host that was
+    # never a dependency of this chart, so openfga.enabled could not work.
+    uri: postgresql://agyn:agyn@platform-postgres:5432/openfga?sslmode=disable
     applyMigrations: true
     waitForMigrations: true
     migrationType: initContainer
@@ -402,31 +405,6 @@ openfga:
       cpu: 500m
       memory: 256Mi
 
-openfga-db:
-  enabled: false
-  fullnameOverride: openfga-db
-  postgres:
-    database: openfga
-    username: openfga
-    password: openfga
-    pgdata: /var/lib/postgresql/data/pgdata
-  persistence:
-    enabled: true
-    size: 5Gi
-    mountPath: /var/lib/postgresql/data
-    volumeClaimTemplateName: data
-  probes:
-    readiness:
-      execCommand: ["pg_isready", "-U", "openfga", "-d", "openfga"]
-    liveness:
-      execCommand: ["pg_isready", "-U", "openfga", "-d", "openfga"]
-  resources:
-    requests:
-      cpu: 10m
-      memory: 64Mi
-    limits:
-      cpu: 500m
-      memory: 256Mi
 
 # Object storage backing the files service. s3.* is the connection contract;
 # this block deploys the instance that satisfies it.
