@@ -1091,6 +1091,39 @@ provisioning:
   # runner and app registered later.
   overlayPolicies:
     enabled: true
+    # The services the platform binds and dials. Declared with the policies
+    # because a policy naming one cannot be applied until it exists, and both
+    # are overlay configuration rather than platform resources.
+    services:
+      - name: gateway
+        roleAttributes: [gateway]
+        intercept:
+          addresses: [gateway.ziti]
+          portRanges: [{low: 443, high: 443}]
+      - name: llm-proxy
+        roleAttributes: [llm-proxy]
+        intercept:
+          addresses: [llm-proxy.ziti]
+          portRanges: [{low: 80, high: 80}]
+      - name: tracing
+        roleAttributes: [tracing]
+        intercept:
+          addresses: [tracing.ziti]
+          portRanges: [{low: 443, high: 443}]
+      # One per vendor, static: the vendor set is closed, so nothing is
+      # provisioned per organization, environment or attachment. What varies per
+      # workload is only which of these it may dial, carried by the
+      # llm-native-<vendor> attribute the Orchestrator stamps on its identity.
+      - name: llm-intercept-anthropic
+        roleAttributes: [llm-intercept-services]
+        intercept:
+          addresses: [api.anthropic.com]
+          portRanges: [{low: 443, high: 443}]
+      - name: llm-intercept-openai
+        roleAttributes: [llm-intercept-services]
+        intercept:
+          addresses: [chatgpt.com]
+          portRanges: [{low: 443, high: 443}]
     policies:
       - name: agents-dial-gateway
         type: Dial

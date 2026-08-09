@@ -133,6 +133,10 @@ metadata:
     {{ $k }}: {{ $v | quote }}
 {{- end }}
 spec:
+{{- with $declared.overlayPolicies.services }}
+  services:
+{{ toYaml . | indent 4 }}
+{{- end }}
   policies:
 {{ toYaml $declared.overlayPolicies.policies | indent 4 }}
 {{- end }}
