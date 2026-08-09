@@ -182,8 +182,12 @@ platform:
         port: 5000
   # Connection details every service reads. The openfga.* block below deploys
   # an instance that satisfies these; point them elsewhere to use a managed one.
+  #
+  # Namespace-relative on purpose: the bundled instance lands in whatever
+  # namespace the release does, so naming one here would break the moment an
+  # operator installs somewhere else.
   openfga:
-    apiUrl: http://openfga.platform.svc.cluster.local:8080
+    apiUrl: http://openfga:8080
     storeId: ""
     modelId: ""
   # OIDC defaults empty so the gateway boots in OIDC-disabled mode.
