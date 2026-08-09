@@ -1,7 +1,7 @@
 {{- $prov := .Values.platform.database.provisioning -}}
 {{- if $prov.enabled -}}
 {{- $pg := .Values.postgres -}}
-{{- $databases := $prov.databases | default $pg.databases -}}
+{{- $databases := $prov.databases | default (include "agyn-platform.databases" . | fromYaml) -}}
 {{- if not $databases -}}
 {{- fail "platform.database.provisioning.databases must list the databases to check, or set platform.database.provisioning.enabled=false" -}}
 {{- end -}}

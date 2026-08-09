@@ -277,14 +277,9 @@ postgres:
     tracing: tracing
     users: users
     ziti-management: ziti_management
-    # The bundled apps keep their own databases, and the release that deploys
-    # them is the release that creates them. They were an installation's job
-    # while the workload layer shipped as a separate chart; it does not, so a
-    # default install is expected to stand one of these up unaided. Turning an
-    # app off leaves an empty database behind, which costs nothing.
-    reminders: reminders
-    telegram-connector: telegram_connector
-    slack-connector: slack_connector
+    # A bundled app's database is declared on the app, under bundledApps, so it
+    # is counted only while that app is enabled. Naming one here works too and
+    # takes precedence, but it is then expected unconditionally.
 
 s3:
   existingSecret: agyn-files-s3
@@ -1237,6 +1232,12 @@ bundledApps:
     # organization, and the catalog only offers public apps to the others.
     visibility: public
     tokenSecretName: &remindersTokenSecret reminders-service-token
+    # `key` is the Secret key the workload reads its URL from, which is the
+    # subchart's name rather than the slug; `name` is the database created for
+    # it. Counted only while this app is enabled.
+    database:
+      key: reminders
+      name: reminders
   telegramConnector:
     enabled: true
     slug: telegram
@@ -1245,6 +1246,9 @@ bundledApps:
     # organization, and the catalog only offers public apps to the others.
     visibility: public
     tokenSecretName: &telegramTokenSecret telegram-connector-service-token
+    database:
+      key: telegram-connector
+      name: telegram_connector
   slackConnector:
     enabled: true
     slug: slack
@@ -1260,6 +1264,9 @@ bundledApps:
       - thread:create
       - participant:add
     tokenSecretName: &slackTokenSecret slack-connector-service-token
+    database:
+      key: slack-connector
+      name: slack_connector
 
 # Each of these sets `env` in full rather than appending to the subchart's list.
 # That is not the interface we want -- an operator should not re-declare entries
