@@ -277,6 +277,14 @@ postgres:
     tracing: tracing
     users: users
     ziti-management: ziti_management
+    # The bundled apps keep their own databases, and the release that deploys
+    # them is the release that creates them. They were an installation's job
+    # while the workload layer shipped as a separate chart; it does not, so a
+    # default install is expected to stand one of these up unaided. Turning an
+    # app off leaves an empty database behind, which costs nothing.
+    reminders: reminders
+    telegram-connector: telegram_connector
+    slack-connector: slack_connector
 
 s3:
   existingSecret: agyn-files-s3
@@ -1237,6 +1245,21 @@ bundledApps:
     # organization, and the catalog only offers public apps to the others.
     visibility: public
     tokenSecretName: &telegramTokenSecret telegram-connector-service-token
+  slackConnector:
+    enabled: true
+    slug: slack
+    displayName: Slack Connector
+    # Public for the same reason the reminders app is: it belongs to the system
+    # organization, and the catalog only offers public apps to the others.
+    visibility: public
+    # The connector creates a thread per Slack thread and puts the configured
+    # agent on it, so it needs both. Declared here because the declaration is
+    # what an installation grants in the installing organization -- an app that
+    # declares nothing is installed with no access.
+    permissions:
+      - thread:create
+      - participant:add
+    tokenSecretName: &slackTokenSecret slack-connector-service-token
 
 # Each of these sets `env` in full rather than appending to the subchart's list.
 # That is not the interface we want -- an operator should not re-declare entries
@@ -1344,3 +1367,35 @@ telegram-connector:
       value: https://api.telegram.org
     - name: TELEGRAM_POLL_TIMEOUT
       value: "25s"
+
+slack-connector:
+  env:
+    - name: HTTP_ADDRESS
+      value: ":8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: *platformDatabaseSecret
+          key: slack-connector
+    - name: ZITI_IDENTITY_FILE
+      value: /ziti/identity.json
+    - name: ZITI_SERVICE_NAME
+      value: app-slack
+    - name: GATEWAY_SERVICE_NAME
+      value: gateway
+    - name: GATEWAY_URL
+      value: *platformGatewayURL
+    - name: SERVICE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: *slackTokenSecret
+          key: token
+    # The app's own id, stored beside its token by the controller: CreateApp is
+    # the only place it is ever returned, and the connector exits without one.
+    - name: APP_ID
+      valueFrom:
+        secretKeyRef:
+          name: *slackTokenSecret
+          key: app_id
+    - name: SLACK_API_BASE_URL
+      value: https://slack.com/api/

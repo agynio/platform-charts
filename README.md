@@ -365,6 +365,7 @@ subchart values:
 
 - `reminders.env`
 - `telegram-connector.env`
+- `slack-connector.env`
 - `k8s-runner.env`
 
 Use those paths to override database URL Secret refs, service token Secret refs,

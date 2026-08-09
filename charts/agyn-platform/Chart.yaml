@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.29.0
+version: 0.30.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -27,6 +27,10 @@ dependencies:
     repository: oci://ghcr.io/agynio/charts
     version: 0.1.5
     condition: bundledApps.telegramConnector.enabled
+  - name: slack-connector
+    repository: oci://ghcr.io/agynio/charts
+    version: 0.1.0
+    condition: bundledApps.slackConnector.enabled
   # Reconciles the resources this release declares the platform should contain.
   # Carries the custom resource definitions those declarations are written
   # against, so the kinds are established by the same release that uses them.
