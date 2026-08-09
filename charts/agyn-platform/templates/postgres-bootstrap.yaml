@@ -2,7 +2,7 @@
 {{- $pg := .Values.postgres -}}
 {{- $auth := $pg.postgres -}}
 {{- $host := printf "%s.%s.svc" $pg.fullnameOverride .Release.Namespace -}}
-{{- $databases := $pg.databases -}}
+{{- $databases := include "agyn-platform.databases" . | fromYaml -}}
 {{- if not $databases -}}
 {{- fail "postgres.databases must list the databases to create when postgres.enabled is true" -}}
 {{- end -}}
