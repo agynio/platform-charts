@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.20.0
+version: 0.20.1
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -17,7 +17,7 @@ dependencies:
   # token that used to require a human between two installs.
   - name: k8s-runner
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.15
+    version: 0.10.20
     condition: bundledRunner.enabled
   - name: reminders
     repository: oci://ghcr.io/agynio/charts
