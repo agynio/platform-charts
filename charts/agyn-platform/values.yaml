@@ -620,6 +620,9 @@ users:
       value: *platformEndpointNats
     - name: GROUP_SYNC_DURABLE
       value: "users-group-sync"
+    # How often device enrollment and connectivity are read back from OpenZiti.
+    - name: DEVICE_LIVENESS_INTERVAL
+      value: "30s"
     # Restricts the one-shot first-admin claim to this verified address, so the
     # user the bundled Keycloak ships with becomes cluster admin on first
     # sign-in. Empty lets whoever signs in first take it.
@@ -700,6 +703,9 @@ networks:
       value: *platformEndpointIdentity
     - name: GROUPS_GRPC_TARGET
       value: *platformEndpointGroups
+    # Resolves environment principals on access grants.
+    - name: AGENTS_GRPC_TARGET
+      value: *platformEndpointAgents
     - name: NOTIFICATIONS_GRPC_TARGET
       value: *platformEndpointNotifications
     - name: NATS_URL
