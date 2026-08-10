@@ -1,19 +1,26 @@
 # Upgrading
 
-## To 0.48.0, from any release before it
+## To 0.49.0, from any release before it
 
-**Reinstall any app installed before this release**, or it still cannot use
-agents.
+**Reinstall any app installed before 0.48.0**, or it still cannot use agents.
 
-0.48.0 takes apps 0.4.7, where installing an app makes it a member of the
+0.49.0 takes apps 0.4.8, where installing an app makes it a member of the
 organization it is installed into. Membership is what `can_initiate` resolves
 through for an `internal` agent, so before this an installed app could create a
 thread and then fail to add any agent to it — the bundled connectors reported
 `identity cannot initiate this agent` on their first mention.
 
-The membership tuple is written by `InstallApp`. Existing installations were
-created without it and are not backfilled, so uninstall and reinstall each one.
-Installation configuration is not preserved by that round trip — copy it first.
+Existing installations were created without the membership tuple and are not
+backfilled, so uninstall and reinstall each one. Installation configuration is
+not preserved by that round trip — copy it first.
+
+**Skip 0.48.0.** It shipped membership on apps 0.4.7, where install and
+uninstall sent a fixed tuple batch. An OpenFGA write batch is atomic and is
+rejected whole for deleting a tuple that does not exist, so uninstalling an
+installation predating membership removed nothing while still reporting success
+— and the reinstall then failed with `AlreadyExists` on the permissions left
+behind. 0.4.8 reads what is written and sends only the difference, which also
+clears an organization already holding orphans.
 
 ## To 0.31.0, from any release before it
 
