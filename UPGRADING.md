@@ -1,5 +1,20 @@
 # Upgrading
 
+## To 0.48.0, from any release before it
+
+**Reinstall any app installed before this release**, or it still cannot use
+agents.
+
+0.48.0 takes apps 0.4.7, where installing an app makes it a member of the
+organization it is installed into. Membership is what `can_initiate` resolves
+through for an `internal` agent, so before this an installed app could create a
+thread and then fail to add any agent to it — the bundled connectors reported
+`identity cannot initiate this agent` on their first mention.
+
+The membership tuple is written by `InstallApp`. Existing installations were
+created without it and are not backfilled, so uninstall and reinstall each one.
+Installation configuration is not preserved by that round trip — copy it first.
+
 ## To 0.31.0, from any release before it
 
 0.31.0 ships the [Slack Connector](https://github.com/agynio/slack-connector) as
