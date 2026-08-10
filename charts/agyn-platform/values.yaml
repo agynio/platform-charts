@@ -1276,6 +1276,7 @@ bundledApps:
 # reorders the pair so the chart default silently takes over. Deriving these
 # needs the service charts to expose the three values as their own keys.
 k8s-runner:
+  fullnameOverride: k8s-runner
   # This list replaces the chart's rather than merging with it, so every entry
   # the runner needs has to be repeated here -- CATALOG_PATH went missing that
   # way and the runner reported no flavors.
@@ -1319,6 +1320,7 @@ k8s-runner:
       type: RuntimeDefault
 
 reminders:
+  fullnameOverride: reminders
   env:
     - name: HTTP_ADDRESS
       value: ":8080"
@@ -1342,6 +1344,7 @@ reminders:
           key: token
 
 telegram-connector:
+  fullnameOverride: telegram-connector
   env:
     - name: HTTP_ADDRESS
       value: ":8080"
@@ -1376,6 +1379,7 @@ telegram-connector:
       value: "25s"
 
 slack-connector:
+  fullnameOverride: slack-connector
   env:
     - name: HTTP_ADDRESS
       value: ":8080"
