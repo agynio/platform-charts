@@ -17,7 +17,7 @@ dependencies:
   # token that used to require a human between two installs.
   - name: k8s-runner
     repository: oci://ghcr.io/agynio/charts
-    version: 0.10.20
+    version: 0.11.0
     condition: bundledRunner.enabled
   - name: reminders
     repository: oci://ghcr.io/agynio/charts
@@ -70,7 +70,7 @@ dependencies:
     condition: egress-gateway.enabled
   - name: gateway
     repository: oci://ghcr.io/agynio/charts
-    version: 0.25.1
+    version: 0.26.0
     condition: gateway.enabled
   - name: terminal-proxy
     repository: oci://ghcr.io/agynio/charts
@@ -90,7 +90,7 @@ dependencies:
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.18.2
+    version: 0.19.0
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
@@ -125,7 +125,7 @@ dependencies:
     condition: authorization.enabled
   - name: groups
     repository: file://charts/groups
-    version: 0.1.0
+    version: 0.2.0
     condition: groups.enabled
   - name: networks
     repository: oci://ghcr.io/agynio/charts
@@ -137,7 +137,7 @@ dependencies:
     condition: apps.enabled
   - name: runners
     repository: oci://ghcr.io/agynio/charts
-    version: 0.7.0
+    version: 0.8.0
     condition: runners.enabled
   - name: ziti-management
     repository: oci://ghcr.io/agynio/charts
@@ -171,7 +171,7 @@ dependencies:
     condition: tracing.enabled
   - name: notifications
     repository: oci://ghcr.io/agynio/charts
-    version: 0.4.0
+    version: 0.5.0
     condition: notifications.enabled
   - name: nats
     repository: https://nats-io.github.io/k8s/helm/charts/
