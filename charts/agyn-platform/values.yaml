@@ -669,6 +669,14 @@ agents-orchestrator:
   # it, and these three were all it named -- which dropped the overlay wiring,
   # the workload init images and eight defaults that then reached no install at
   # all. The subchart carries them, so the umbrella says nothing.
+  #
+  # extraEnvVars appends, for the same reason it does under identity above.
+  # The Orchestrator calls Notifications and Runners as this identity rather
+  # than naming one of the agent instances it reconciles, which is what it used
+  # to do to satisfy checks written for those instances.
+  extraEnvVars:
+    - name: PLATFORM_IDENTITY_ID
+      value: *platformAdminIdentityId
   resources:
     requests:
       cpu: 10m
