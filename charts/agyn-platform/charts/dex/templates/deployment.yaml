@@ -1,0 +1,1 @@
+{{- include "dex.render" (dict "template" "service-base.deployment" "context" .) -}}

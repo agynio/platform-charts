@@ -1,0 +1,32 @@
+{{- if .Values.routing.enabled }}
+{{- $host := include "dex.host" . -}}
+{{- if not $host -}}
+{{- fail "dex.routing.host is required when routing is enabled, or set externalUrl so it can be derived" -}}
+{{- end -}}
+# Bound to the platform's Gateway rather than one of its own: Istio picks a TLS
+# filter chain by SNI, and a browser served a wildcard certificate reuses one
+# connection for every host under it, so a host isolated on its own Gateway is
+# reachable only on a connection opened for that host and 404s on any other.
+# wiring.gatewayHost adds the hostname to the Gateway's server list.
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "service-base.fullname" . }}
+  namespace: {{ .Values.routing.gateway.namespace }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ $host | quote }}
+  gateways:
+    - {{ .Values.routing.gateway.name }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: {{ printf "%s.%s.svc.cluster.local" (include "service-base.fullname" .) .Release.Namespace }}
+            port:
+              number: {{ (first .Values.service.ports).port }}
+{{- end }}

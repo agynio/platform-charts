@@ -1,5 +1,55 @@
 # Upgrading
 
+## To 0.54.0
+
+**Nothing is required.** 0.53.0 adds `dex` as a second bundled OIDC provider,
+disabled, and changes nothing for an install that does not enable it. Keycloak
+stays exactly as it was and remains the provider the bundle ships with.
+
+Dex is there for installs that cannot carry Keycloak: on the same cluster it
+holds 7Mi resident against Keycloak's 596Mi, from a 42MiB image against 237MiB,
+and starts in under a second instead of running a schema migration.
+
+It serves the same clients (`agyn-<app>`, public, PKCE), the same claims
+(`email`, `email_verified`, `name`, `preferred_username`) and the same password
+grant the e2e suites use, so switching is a change of issuer and nothing else.
+
+It ships **two** accounts, `admin/admin` and `user/user`. `admin@agyn.dev` is the
+address `provisioning.clusterAdmins` declares, so the controller grants it
+cluster admin once that account exists; `user@agyn.dev` arrives with no role and
+no organization, which is what the platform does with a subject it has not seen.
+Add or replace them under `dex.users`.
+
+Three differences to know first:
+
+- **The first sign-in for each account must use the email address.** Dex looks a
+  static user up by email and has no separate username field, so `dex.users[]`
+  carries a `loginAliases` list whose entries are extra static passwords sharing
+  one `userID` — the same identity, since `sub` is built from `userID`. The login
+  form still reads "Email Address" (a literal in Dex, with no config path), but
+  `admin` and `user` are accepted. The catch is that an alias *is* its entry's
+  email field, so provisioning through one stores `admin` as the user's email and
+  the `ClusterAdmin` declaration for the real address has nothing to resolve to.
+  Once a user exists, either identifier works: the Gateway resolves a known
+  subject without re-reading the claims.
+- **No `end_session_endpoint`.** oidc-client-ts `signoutRedirect()` throws on a
+  discovery document without one, so the apps' Sign out button does nothing
+  until they fall back to dropping the local tokens. Dex holds no browser
+  session, so that fallback is a complete sign-out.
+- **No SSO cookie.** Each app asks for the password separately, and again in
+  each new tab, because the apps keep tokens in `sessionStorage`.
+
+Both gaps are one upstream change ([dexidp/dex#4560]).
+
+To enable it: set `dex.enabled=true`, give it a hostname of its own
+(`dex.externalUrl`), and point `platform.oidc.issuerUrl`, the Gateway's
+`oidcIssuerUrl` and each app's `oidcAuthority` at it. Its database is created by
+the provisioning job, counted only while it is enabled. Both providers may run
+at once — that is how an install moves from one to the other — but not on one
+hostname; the chart fails the render if they collide.
+
+[dexidp/dex#4560]: https://github.com/dexidp/dex/issues/4560
+
 ## To 0.49.0, from any release before it
 
 **Reinstall any app installed before 0.48.0**, or it still cannot use agents.

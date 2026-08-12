@@ -1,0 +1,161 @@
+{{- if .Values.wiring.enabled }}
+{{- $w := .Values.wiring -}}
+{{- $name := printf "%s-wiring" (include "service-base.fullname" .) -}}
+{{- $host := include "dex.host" . -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+# Cluster-scoped because the work spans namespaces: the CA lives in the ingress
+# namespace, CoreDNS in kube-system, the ConfigMap here.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "patch"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["gateways"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  labels:
+{{ include "service-base.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+{{ include "service-base.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $name }}
+      restartPolicy: OnFailure
+      containers:
+        - name: wiring
+          image: "{{ $w.image.repository }}:{{ $w.image.tag }}"
+          imagePullPolicy: {{ $w.image.pullPolicy }}
+          command: ["/bin/bash", "-ec"]
+          args:
+            - |
+              {{- if $w.caBundle.enabled }}
+              echo "[wiring] publishing {{ $w.caBundle.sourceSecret }} as configmap/{{ $w.caBundle.configMapName }}"
+              kubectl -n {{ $w.caBundle.sourceNamespace }} get secret {{ $w.caBundle.sourceSecret }} \
+                -o jsonpath='{.data.tls\.crt}' | base64 -d >/tmp/ca.crt
+              kubectl -n {{ .Release.Namespace }} create configmap {{ $w.caBundle.configMapName }} \
+                --from-file=ca.crt=/tmp/ca.crt --dry-run=client -o yaml | kubectl apply -f -
+              {{- end }}
+
+              {{- if $w.corednsRewrite.enabled }}
+              # Merged into the existing override, never written over it: the
+              # OpenZiti rewrites share this key, and so does the keycloak
+              # subchart's own wiring when both providers are installed.
+              LINE="rewrite name {{ $host }} {{ $w.corednsRewrite.target }}"
+              CUR="$(kubectl -n kube-system get configmap coredns-custom \
+                     -o jsonpath='{.data.agyn\.override}' 2>/dev/null || true)"
+              if printf '%s' "$CUR" | grep -qxF "$LINE"; then
+                echo "[wiring] coredns rewrite already present"
+              else
+                echo "[wiring] adding coredns rewrite: $LINE"
+                NEW="$(printf '%s\n%s\n' "$CUR" "$LINE" | grep -v '^$')"
+                {
+                  echo "data:"
+                  echo "  agyn.override: |"
+                  printf '%s\n' "$NEW" | sed 's/^/    /'
+                } >/tmp/coredns.yaml
+                kubectl -n kube-system get configmap coredns-custom >/dev/null 2>&1 ||
+                  kubectl -n kube-system create configmap coredns-custom
+                kubectl -n kube-system patch configmap coredns-custom --type merge --patch-file /tmp/coredns.yaml
+              fi
+              {{- end }}
+
+              {{- if $w.ingressHostPort.enabled }}
+              # The issuer is one URL used from the browser and from inside the
+              # cluster, so the port it names has to answer on both sides.
+              PORT={{ $w.ingressHostPort.port }}
+              SVC={{ $w.ingressHostPort.service }}
+              SNS={{ $w.ingressHostPort.namespace }}
+              IDX="$(kubectl -n "$SNS" get svc "$SVC" \
+                     -o jsonpath='{range .spec.ports[*]}{.name}{"\n"}{end}' |
+                     grep -nxF 'https-hostport' | cut -d: -f1 || true)"
+              if [ -n "$IDX" ]; then
+                CURPORT="$(kubectl -n "$SNS" get svc "$SVC" -o jsonpath="{.spec.ports[$((IDX-1))].port}")"
+                if [ "$CURPORT" = "$PORT" ]; then
+                  echo "[wiring] ingress already publishes $PORT"
+                else
+                  echo "[wiring] moving ingress host port $CURPORT -> $PORT"
+                  kubectl -n "$SNS" patch svc "$SVC" --type=json \
+                    -p "[{\"op\":\"replace\",\"path\":\"/spec/ports/$((IDX-1))/port\",\"value\":$PORT}]"
+                fi
+              elif [ "$PORT" = "443" ] || [ "$PORT" = "80" ] || [ "$PORT" = "15021" ]; then
+                echo "[wiring] $PORT is already published by $SVC"
+              else
+                echo "[wiring] publishing $PORT on $SVC"
+                kubectl -n "$SNS" patch svc "$SVC" --type=json \
+                  -p "[{\"op\":\"add\",\"path\":\"/spec/ports/-\",\"value\":{\"name\":\"https-hostport\",\"port\":$PORT,\"protocol\":\"TCP\",\"targetPort\":{{ $w.ingressHostPort.targetPort }}}}]"
+              fi
+              {{- end }}
+
+              {{- if $w.gatewayHost.enabled }}
+              # One Gateway, one TLS filter chain. A host on a Gateway of its
+              # own is unreachable over a coalesced connection opened for a
+              # sibling, which is every request a browser makes after the first.
+              GW={{ .Values.routing.gateway.name }}
+              GNS={{ .Values.routing.gateway.namespace }}
+              if kubectl -n "$GNS" get gateway "$GW" \
+                   -o jsonpath='{.spec.servers[0].hosts}' | grep -qF '"{{ $host }}"'; then
+                echo "[wiring] $GW already serves {{ $host }}"
+              else
+                echo "[wiring] adding {{ $host }} to gateway/$GW"
+                kubectl -n "$GNS" patch gateway "$GW" --type=json \
+                  -p '[{"op":"add","path":"/spec/servers/0/hosts/-","value":"{{ $host }}"}]'
+              fi
+              {{- end }}
+              echo "[wiring] done"
+{{- end }}

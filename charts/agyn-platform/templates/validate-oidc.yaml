@@ -1,0 +1,12 @@
+{{- /* Renders nothing. Both bundled providers may run at once -- that is how an
+       install moves from one to the other -- but not on one hostname: Istio
+       merges the VirtualServices for a host into a route set whose order across
+       resources is not defined, so the `/` prefix on either one can swallow the
+       other, and which one wins changes between applies. */ -}}
+{{- if and (.Values.keycloak).enabled (.Values.dex).enabled -}}
+{{- $keycloakHost := include "agyn-platform.urlHost" (dict "url" (.Values.keycloak.externalUrl | default "") "override" .Values.keycloak.routing.host) -}}
+{{- $dexHost := include "agyn-platform.urlHost" (dict "url" (.Values.dex.externalUrl | default "") "override" .Values.dex.routing.host) -}}
+{{- if and $keycloakHost (eq $keycloakHost $dexHost) -}}
+{{- fail (printf "keycloak and dex are both enabled on %s: give one of them its own hostname, or disable one" $dexHost) -}}
+{{- end -}}
+{{- end -}}
