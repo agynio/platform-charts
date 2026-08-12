@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.52.0
+version: 0.53.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -119,6 +119,14 @@ dependencies:
     repository: file://charts/keycloak
     version: 0.2.2
     condition: keycloak.enabled
+  # The same job in a fraction of the footprint -- 7Mi resident against
+  # Keycloak's 596Mi, from a 42MiB image against 237MiB -- for installs that
+  # cannot carry Keycloak. Off by default: it has no RP-initiated logout
+  # endpoint and no browser SSO session, which the apps notice.
+  - name: dex
+    repository: file://charts/dex
+    version: 0.1.0
+    condition: dex.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts
     version: 0.6.5

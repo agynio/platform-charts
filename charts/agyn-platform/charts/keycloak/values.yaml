@@ -120,8 +120,9 @@ appOrigins:
   tracing: https://tracing.agyn.dev:2496
   sandboxes: https://sandboxes.agyn.dev:2496
 
-# The user the bundle ships with. Its email is what users.FIRST_ADMIN_EMAIL
-# matches on, and emailVerified must stay true or the claim is refused.
+# The user the bundle ships with. Its email is the address
+# provisioning.clusterAdmins declares, which is what the controller grants
+# cluster admin against, and emailVerified must stay true.
 adminUser:
   username: admin
   email: admin@agyn.dev

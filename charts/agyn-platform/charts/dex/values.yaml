@@ -1,0 +1,380 @@
+nameOverride: ""
+fullnameOverride: dex
+
+commonAnnotations: {}
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+image:
+  registry: ghcr.io
+  repository: dexidp/dex
+  tag: v2.45.1
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+revisionHistoryLimit: 10
+updateStrategy: {}
+deploymentAnnotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  enabled: false
+  fsGroup: null
+
+rbac:
+  create: false
+  clusterWide: false
+  rules: []
+
+priorityClassName: ""
+terminationGracePeriodSeconds: null
+
+# Browser-facing origin, and the token issuer verbatim: Dex stamps `iss` with
+# this string and serves every endpoint under its path, so one URL has to
+# resolve from the browser and from inside the cluster. Every OIDC consumer must
+# be configured with exactly the same string — zitadel/oidc rejects a discovery
+# document whose issuer differs from the URL it was fetched from.
+#
+# A hostname of its own, not the keycloak subchart's `auth.`: two VirtualServices
+# on one host merge into a route set whose order across resources is not defined,
+# so a `/` prefix on either one can swallow the other. Separate hosts let both
+# providers run at once while an install is being moved from one to the other.
+#
+# Defaults to the bundle VM's own address: agyn.dev is BASE_DOMAIN and 2496 is
+# INGRESS_HOST_PORT, both defaulted the same way in install-platform.sh.
+externalUrl: https://dex.agyn.dev:2496
+
+# Everything needed to reach externalUrl, owned by this chart so an upgrade
+# delivers it — the same arrangement the keycloak subchart carries, for the same
+# reason: a bundle VM bakes its manifests once and wipes them, so anything left
+# outside the chart never reaches a machine that is already running.
+#
+# An install with real DNS and a publicly-trusted certificate wants none of it.
+# Turn the pieces off individually there.
+routing:
+  # VirtualService for the issuer hostname, bound to the platform's existing
+  # Gateway rather than one of its own: Istio selects a filter chain by SNI, and
+  # a browser holding a wildcard certificate coalesces every *.domain host onto
+  # one connection, so a host isolated on its own Gateway 404s on every request
+  # after the first. The hostname is added to the existing Gateway's server list
+  # by the wiring Job, since that resource belongs to another release.
+  enabled: false
+  host: ""
+  gateway:
+    name: platform-gateway
+    namespace: istio-gateway
+
+# One Job for the cluster wiring a chart cannot express as a template. It runs
+# BEFORE the release, so the port, the DNS name and the CA are in place by the
+# time anything that needs them starts. Each piece is independently skippable
+# and each is idempotent, which is also what makes it safe to leave enabled on
+# both providers at once — they write the same CA ConfigMap and the same ingress
+# port, and differ only in the hostname each adds.
+wiring:
+  enabled: false
+  # Needs kubectl AND a shell: rancher/kubectl is distroless and bitnami no
+  # longer publishes versioned free tags. Track the cluster's minor.
+  image:
+    repository: alpine/k8s
+    tag: "1.33.1"
+    pullPolicy: IfNotPresent
+  # Copies the ingress CA into this namespace as a ConfigMap. The Gateway and
+  # Media Proxy fetch discovery, JWKS and userinfo from the issuer themselves,
+  # and a pod cannot read a Secret from another namespace.
+  caBundle:
+    enabled: false
+    sourceNamespace: istio-gateway
+    sourceSecret: agyn-dev-ca
+    configMapName: agyn-local-ca
+  # Points the issuer hostname at the ingress from inside the cluster. Merged
+  # into coredns-custom rather than written over it — OpenZiti keeps its own
+  # rewrites in the same ConfigMap.
+  corednsRewrite:
+    enabled: false
+    target: istio-ingressgateway.istio-gateway.svc.cluster.local
+  # Publishes the browser's port on the ingress Service, mapped to the same TLS
+  # listener. The issuer is one URL used from the browser and from in-cluster,
+  # so the port in it has to answer on both sides.
+  ingressHostPort:
+    enabled: false
+    port: 2496
+    service: istio-ingressgateway
+    namespace: istio-gateway
+    targetPort: 443
+  # Adds the issuer hostname to the platform Gateway's server list, so it shares
+  # the one TLS filter chain with every sibling host.
+  gatewayHost:
+    enabled: false
+
+# Redirect targets for the four app clients. Empty entries drop the client, so
+# an install that runs only some of the apps does not carry dead redirect URIs.
+#
+# Client IDs are `agyn-<app>`, the same as the keycloak realm's, so switching
+# provider is a change of issuer and nothing else.
+appOrigins:
+  console: https://console.agyn.dev:2496
+  chat: https://chat.agyn.dev:2496
+  tracing: https://tracing.agyn.dev:2496
+  sandboxes: https://sandboxes.agyn.dev:2496
+
+# Dex matches redirect URIs exactly — there is no wildcard form — so the apps'
+# callback path is named here rather than covered by `<origin>/*`.
+callbackPath: /callback
+
+# Origins allowed to call /token, /keys and /.well-known from a browser. Dex
+# disables CORS entirely when the list is empty, which fails the code exchange
+# for every app. Defaults to appOrigins; set it to override.
+allowedOrigins: []
+
+# The users the bundle ships with. Dex authenticates a static user BY EMAIL --
+# `username` only names them in the UI and in the claims -- so loginAliases adds
+# the identifiers you would rather type.
+#
+# No role is granted here. Cluster admin is declared, by address, in the
+# umbrella's provisioning.clusterAdmins, and the platform controller grants it
+# once an account with that address exists -- removing the declaration revokes
+# it. Nobody is granted anything for signing in first. Everyone else arrives as a
+# plain user belonging to no organization, which is what the platform does with a
+# subject it has not seen.
+#
+# passwordHash is bcrypt, cost 10..16, because that is what Dex stores; there is
+# no plaintext form. Generate one with:
+#   htpasswd -bnBC 10 "" '<password>' | tr -d ':\n'
+#
+# userID is the stable half of the `sub` claim (Dex encodes userID and connector
+# id into it), so it must not change once a user has been provisioned against it.
+#
+# An alias IS its own entry's email field, since that is the only lookup key Dex
+# has, so a login through an alias carries the alias as its email claim. That
+# matters only for the sign-in that PROVISIONS a user: come in on the address
+# first, or the record is created with `admin` as its email and no
+# clusterAdmins declaration naming the real address can ever resolve to it.
+# Afterwards either identifier works, because the Gateway resolves a known
+# subject without re-reading the claims.
+users:
+  - username: admin
+    name: Local Admin
+    email: admin@agyn.dev
+    userID: bundled-admin
+    # bcrypt of `admin`
+    passwordHash: "$2y$10$7qhskF5Og6dwfFZ0oiLku.Z26SRrhtEoMQlR25SxkAXBs21xiVEbq"
+    loginAliases:
+      - admin
+  # A second account with no role and no organization, so the bundle can be
+  # looked at as an ordinary member rather than as the administrator.
+  - username: user
+    name: Local User
+    email: user@agyn.dev
+    userID: bundled-user
+    # bcrypt of `user`
+    passwordHash: "$2y$10$7Q5V8N2wvBv2lH2xmk9vN.hCuGtLRkk0PdHnbjZ8b7EYnklW4YO3e"
+    loginAliases:
+      - user
+
+# Takes precedence over each user's passwordHash when set. Keys are
+# `password-hash-<username>`. Either way the hash reaches Dex through an env var
+# and never appears in the ConfigMap.
+auth:
+  existingSecret: ""
+
+# Dex keeps signing keys, refresh tokens and auth requests here. Postgres rather
+# than sqlite3 or memory: signing keys regenerated on restart invalidate every
+# token already issued, and a bundle VM restarts.
+database:
+  host: ""
+  port: 5432
+  name: dex
+  username: agyn
+  password: agyn
+  sslMode: disable
+  # Takes precedence over password when set.
+  existingSecret: ""
+  passwordKey: password
+
+# Additional Dex configuration, merged over what this chart renders. Connectors
+# (LDAP, GitHub, OIDC upstreams) go here.
+extraConfig: {}
+
+# Static Dex config knobs.
+config:
+  # Nothing to approve on an install whose only client set is its own apps.
+  skipApprovalScreen: true
+  # Presents the password form directly instead of a one-entry connector list.
+  alwaysShowLoginScreen: false
+  # Turns on the resource-owner password grant against the local password DB,
+  # which is how the e2e suites mint a token without a browser. Set to "" to
+  # refuse the grant.
+  passwordConnector: local
+  # ID token lifetime, and so also the access token's: Dex signs one token shape.
+  # 5m to match the Keycloak realm's access token lifespan, not Dex's own 24h
+  # default -- the apps hold these in Web Storage, where the exposure window is
+  # the token's lifetime. automaticSilentRenew refreshes before expiry, and each
+  # tab holds its own token, so nothing races.
+  idTokenExpiry: 5m
+  # Dex has no revocation endpoint, so signing out discards the refresh token in
+  # the browser without invalidating it here -- this is how long it stays usable
+  # if it leaked first. 24h rather than Dex's 2160h default, since it is the only
+  # bound on a discarded token. Rotation is on by default, so each use burns the
+  # previous one.
+  refreshTokenExpiry:
+    absoluteLifetime: ""
+    validIfNotUsedFor: 24h
+
+# runAsUser is not redundant with runAsNonRoot: the image declares `USER dex:dex`
+# by name, and kubelet cannot prove a name is non-root -- it refuses to start the
+# container with "image has non-numeric user (dex)". 1001 is the uid that name
+# resolves to in the image.
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+# The image's entrypoint runs gomplate over any argument ending in .yaml and
+# execs dex on the result, so `serve` is reached through it rather than around
+# it -- that is what makes gomplate syntax in extraConfig work. It writes the
+# rendered file to /tmp, which is why the read-only root filesystem below still
+# needs a writable one mounted there.
+command: []
+args:
+  - dex
+  - serve
+  - /etc/dex/config.yaml
+
+containerPorts:
+  - name: http
+    containerPort: 5556
+    protocol: TCP
+  # Health and metrics are served here, not on the HTTP port.
+  - name: telemetry
+    containerPort: 5558
+    protocol: TCP
+
+# routing.yaml routes the issuer at the first port, so http stays first. The
+# telemetry port is published because the ServiceMonitor below scrapes it by
+# Service port name.
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5556
+      targetPort: http
+      protocol: TCP
+    - name: telemetry
+      port: 5558
+      targetPort: telemetry
+      protocol: TCP
+
+env: []
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# First start creates the schema. Everything after it is a Go binary reading a
+# config file, so only the startup probe needs any patience.
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /healthz/ready
+    port: telemetry
+  periodSeconds: 3
+  failureThreshold: 40
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz/ready
+    port: telemetry
+  periodSeconds: 10
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz/live
+    port: telemetry
+  periodSeconds: 30
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+automountServiceAccountToken: false
+
+envFrom: []
+extraEnvVars: []
+extraEnvVarsCM: ""
+extraEnvVarsSecret: ""
+
+configMounts: []
+# The entrypoint renders the config here before exec'ing dex. Nothing else in the
+# container writes, so the root filesystem stays read-only.
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+
+initContainers: []
+extraContainers: []
+
+lifecycle: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null
+  metrics: []
+  behavior: {}
+
+pdb:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: null
+
+ingress:
+  enabled: false
+  ingressClassName: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+metrics:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    namespace: ""
+    interval: ""
+    scrapeTimeout: ""
+    honorLabels: false
+    labels: {}
+    annotations: {}
+    relabelings: []
+    metricRelabelings: []
+    endpoints:
+      - port: telemetry
+        path: /metrics
+        interval: ""
+        scrapeTimeout: ""

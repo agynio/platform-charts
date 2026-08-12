@@ -623,15 +623,10 @@ users:
     # How often device enrollment and connectivity are read back from OpenZiti.
     - name: DEVICE_LIVENESS_INTERVAL
       value: "30s"
-    # Restricts the one-shot first-admin claim to this verified address, so the
-    # user the bundled Keycloak ships with becomes cluster admin on first
-    # sign-in. Empty lets whoever signs in first take it.
-    #
-    # Must be kept equal to keycloak.adminUser.email. It cannot be derived from
-    # it: this chart pins users 0.5.3, whose service-base (0.1.4) renders env
-    # with toYaml and no tpl, so a value here is taken literally.
-    - name: FIRST_ADMIN_EMAIL
-      value: "admin@agyn.dev"
+    # No FIRST_ADMIN_EMAIL. users #29 deleted the one-shot first-admin claim when
+    # provisioning.clusterAdmins replaced it, and this kept setting an env var
+    # the service no longer reads -- which read as the live mechanism to anyone
+    # looking at the chart. Cluster admin is declared, not raced for.
   resources:
     requests:
       cpu: 10m
@@ -850,6 +845,32 @@ keycloak:
   database:
     host: platform-postgres
     name: keycloak
+    username: agyn
+    password: agyn
+
+# The lighter bundled OIDC provider, for installs that cannot carry Keycloak. On
+# one bundle VM: 7Mi resident against Keycloak's 596Mi, a 42MiB image against
+# 237MiB, and a start under a second rather than a schema migration. Same
+# clients, same claims, same admin user, so switching is a change of issuer and
+# nothing else -- except that Dex identifies a static user by email address, so
+# the bundled admin signs in as admin@agyn.dev rather than admin.
+#
+# Enable at most one of keycloak and dex, and give each its own hostname if both
+# are on: two VirtualServices for one host merge into a route set whose order
+# across resources is not defined, and a `/` prefix on either swallows the other.
+#
+# Two things Keycloak does that Dex 2.45 does not:
+#   - no end_session_endpoint, so oidc-client-ts signoutRedirect() throws rather
+#     than clearing the session. Dex holds no browser session to end, so dropping
+#     the local tokens is a complete sign-out -- but the apps do not do that yet.
+#   - no SSO cookie, so each app asks for the password separately, and again in
+#     each new tab (the apps keep tokens in sessionStorage).
+# Both are tracked upstream in dexidp/dex#4560.
+dex:
+  enabled: false
+  database:
+    host: platform-postgres
+    name: dex
     username: agyn
     password: agyn
 
