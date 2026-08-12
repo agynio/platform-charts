@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.57.0
+version: 0.58.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -125,7 +125,7 @@ dependencies:
   # endpoint and no browser SSO session, which the apps notice.
   - name: dex
     repository: file://charts/dex
-    version: 0.1.0
+    version: 0.2.0
     condition: dex.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts

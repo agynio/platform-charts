@@ -2,7 +2,7 @@ apiVersion: v2
 name: dex
 description: Bundled Dex OIDC provider, an alternative to the Keycloak subchart for installs that cannot carry it.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "2.45.1"
 home: https://github.com/agynio/platform-charts
 sources:

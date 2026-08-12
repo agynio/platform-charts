@@ -89,16 +89,14 @@ Add or replace them under `dex.users`.
 
 Three differences to know first:
 
-- **The first sign-in for each account must use the email address.** Dex looks a
-  static user up by email and has no separate username field, so `dex.users[]`
-  carries a `loginAliases` list whose entries are extra static passwords sharing
-  one `userID` — the same identity, since `sub` is built from `userID`. The login
-  form still reads "Email Address" (a literal in Dex, with no config path), but
-  `admin` and `user` are accepted. The catch is that an alias *is* its entry's
-  email field, so provisioning through one stores `admin` as the user's email and
-  the `ClusterAdmin` declaration for the real address has nothing to resolve to.
-  Once a user exists, either identifier works: the Gateway resolves a known
-  subject without re-reading the claims.
+- **Sign in with the email address**, `admin@agyn.dev` rather than `admin`. Dex
+  looks a static user up by email and has no second identifier, and a bare
+  username cannot be made an alias for one: an entry's email field *is* its
+  lookup key, so an extra entry keyed `admin` is not an alias for
+  `admin@agyn.dev` — it is an account whose email is `admin`. That address is
+  what `provisioning.clusterAdmins` matches on, and claims are read once at
+  provisioning, so a wrong first sign-in cannot be repaired by signing in
+  correctly afterwards.
 - **No `end_session_endpoint`.** oidc-client-ts `signoutRedirect()` throws on a
   discovery document without one, so the apps' Sign out button does nothing
   until they fall back to dropping the local tokens. Dex holds no browser

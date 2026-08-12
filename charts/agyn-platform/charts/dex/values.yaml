@@ -135,11 +135,18 @@ callbackPath: /callback
 # for every app. Defaults to appOrigins; set it to override.
 allowedOrigins: []
 
-# The users the bundle ships with. Dex authenticates a static user BY EMAIL --
-# `username` only names them in the UI and in the claims -- so loginAliases adds
-# the identifiers you would rather type.
+# The users the bundle ships with. Sign in with the email address: Dex looks a
+# static user up by it and has no second identifier.
 #
-# No role is granted here. Cluster admin is declared, by address, in the
+# There is deliberately no way to accept a bare username. A Dex entry's email
+# field IS its lookup key -- passwordDB.Login returns Email: p.Email from
+# whichever entry matched -- so an extra entry keyed `admin` does not alias
+# admin@agyn.dev, it becomes an account whose email is `admin`. That address is
+# what provisioning.clusterAdmins matches on, and claims are read once at
+# provisioning, so signing in correctly afterwards cannot repair the record.
+# Accepting the username costs the field every address-based declaration keys on.
+#
+# No role is granted here either. Cluster admin is declared, by address, in the
 # umbrella's provisioning.clusterAdmins, and the platform controller grants it
 # once an account with that address exists -- removing the declaration revokes
 # it. Nobody is granted anything for signing in first. Everyone else arrives as a
@@ -152,14 +159,6 @@ allowedOrigins: []
 #
 # userID is the stable half of the `sub` claim (Dex encodes userID and connector
 # id into it), so it must not change once a user has been provisioned against it.
-#
-# An alias IS its own entry's email field, since that is the only lookup key Dex
-# has, so a login through an alias carries the alias as its email claim. That
-# matters only for the sign-in that PROVISIONS a user: come in on the address
-# first, or the record is created with `admin` as its email and no
-# clusterAdmins declaration naming the real address can ever resolve to it.
-# Afterwards either identifier works, because the Gateway resolves a known
-# subject without re-reading the claims.
 users:
   - username: admin
     name: Local Admin
@@ -167,8 +166,6 @@ users:
     userID: bundled-admin
     # bcrypt of `admin`
     passwordHash: "$2y$10$7qhskF5Og6dwfFZ0oiLku.Z26SRrhtEoMQlR25SxkAXBs21xiVEbq"
-    loginAliases:
-      - admin
   # A second account with no role and no organization, so the bundle can be
   # looked at as an ordinary member rather than as the administrator.
   - username: user
@@ -177,8 +174,6 @@ users:
     userID: bundled-user
     # bcrypt of `user`
     passwordHash: "$2y$10$7Q5V8N2wvBv2lH2xmk9vN.hCuGtLRkk0PdHnbjZ8b7EYnklW4YO3e"
-    loginAliases:
-      - user
 
 # Takes precedence over each user's passwordHash when set. Keys are
 # `password-hash-<username>`. Either way the hash reaches Dex through an env var

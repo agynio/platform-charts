@@ -91,28 +91,23 @@ database-password
 {{- end }}
 {{- end }}
 
-{{- /* One entry per accepted identifier, aliases sharing their user's userID so
-       they are one identity. Dex looks a static user up by the email field and
-       nothing else, so an alias occupies that field in its own entry.
+{{- /* One entry per user, keyed on the address. Dex looks a static user up by
+       the email field and nothing else, and returns that same field as the
+       email claim -- so a second entry keyed on a username is not an alias, it
+       is an account whose email is that username. The platform matches
+       declarations on the address, so that costs more than it buys.
 
-       emailVerified is left at Dex's default of true: FIRST_ADMIN_EMAIL only
-       takes the one-shot cluster-admin claim from a verified address. */ -}}
+       emailVerified is left at Dex's default of true. */ -}}
 {{- $passwords := list -}}
 {{- range $user := .Values.users | default (list) }}
-{{- $entry := dict
+{{- $passwords = append $passwords (dict
       "email" (required "dex.users[].email is required" $user.email)
       "username" (required "dex.users[].username is required" $user.username)
       "name" ($user.name | default $user.username)
       "preferredUsername" $user.username
       "userID" (required "dex.users[].userID is required" $user.userID)
-      "hashFromEnv" (include "dex.hashEnvName" $user)
+      "hashFromEnv" (include "dex.hashEnvName" $user))
 -}}
-{{- $passwords = append $passwords $entry -}}
-{{- range $alias := $user.loginAliases | default (list) }}
-{{- if and $alias (ne $alias $user.email) }}
-{{- $passwords = append $passwords (merge (dict "email" $alias) (deepCopy $entry)) -}}
-{{- end }}
-{{- end }}
 {{- end }}
 {{- if not $passwords -}}
 {{- fail "dex.users must list at least one user, or nobody can sign in" -}}
