@@ -1,0 +1,46 @@
+{{/*
+  The one place the frontends learn each other's addresses. They otherwise
+  guess, by swapping the first label of their own hostname, which only holds
+  when every app sits at <product>.<domain>.
+
+  Derived from the routes that already build the VirtualServices, so a custom
+  subdomain is declared once. A global would be the obvious carrier, but the
+  charts still on service-base 0.1.4 reject unknown global keys.
+*/}}
+{{- $ext := .Values.platform.externalUrls | default dict -}}
+{{- $ing := .Values.platform.ingress -}}
+{{- $byRoute := dict -}}
+{{- if $ing.enabled -}}
+{{- $domain := default $ing.baseDomain ((.Values.global.ingress | default dict).baseDomain) -}}
+{{- if $domain -}}
+{{- range $ing.routes | default list -}}
+{{- $host := ternary $domain (printf "%s.%s" .subdomain $domain) (eq .subdomain "") -}}
+{{- $_ := set $byRoute .name (printf "https://%s" $host) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{/* env key -> (explicit override, route it is otherwise served by) */}}
+{{- $keys := list
+      (dict "env" "CHAT_URL" "override" $ext.chat "route" "chat-app")
+      (dict "env" "TRACING_URL" "override" $ext.tracing "route" "tracing-app")
+      (dict "env" "CONSOLE_URL" "override" $ext.console "route" "console-app")
+      (dict "env" "SANDBOXES_URL" "override" $ext.sandboxes "route" "sandboxes-app")
+      (dict "env" "MEDIA_PROXY_URL" "override" $ext.mediaProxy "route" "media-proxy")
+-}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  {{/* Fixed name: subchart values reference it verbatim and are not templated. */}}
+  name: agyn-platform-app-urls
+  labels:
+    app.kubernetes.io/name: {{ include "agyn-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+data:
+{{- range $keys }}
+{{- $url := default (get $byRoute .route) .override -}}
+{{- if $url }}
+  {{ .env }}: {{ $url | quote }}
+{{- end }}
+{{- end }}

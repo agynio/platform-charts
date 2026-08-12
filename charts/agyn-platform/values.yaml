@@ -74,6 +74,14 @@ platform:
     # chart's own guard only fires on an empty value. The platform's own domain
     # is at least right for the install that forgets to set it.
     terminalProxyWebSocket: &platformTerminalProxyWebSocketURL "wss://terminal.agyn.dev/terminal"
+    # Where each frontend tells users the others live. Left empty they follow
+    # ingress.routes below, which is right for any install this chart routes.
+    # Set them only when something else owns the ingress.
+    chat: ""
+    tracing: ""
+    console: ""
+    sandboxes: ""
+    mediaProxy: ""
   runnersAuthorizationPolicy:
     enabled: true
     orchestratorServiceAccount:
@@ -1017,7 +1025,11 @@ media-proxy:
       cpu: 500m
       memory: 256Mi
 
+# Every frontend renders the same product switcher, so each one needs all four
+# addresses. They arrive through envFrom rather than env: an explicit empty env
+# var would shadow the ConfigMap and re-enable the hostname guessing.
 console-app:
+  extraEnvVarsCM: agyn-platform-app-urls
   resources:
     requests:
       cpu: 10m
@@ -1027,6 +1039,7 @@ console-app:
       memory: 256Mi
 
 chat-app:
+  extraEnvVarsCM: agyn-platform-app-urls
   resources:
     requests:
       cpu: 10m
@@ -1036,6 +1049,7 @@ chat-app:
       memory: 256Mi
 
 tracing-app:
+  extraEnvVarsCM: agyn-platform-app-urls
   resources:
     requests:
       cpu: 10m
@@ -1045,6 +1059,7 @@ tracing-app:
       memory: 256Mi
 
 sandboxes-app:
+  extraEnvVarsCM: agyn-platform-app-urls
   resources:
     requests:
       cpu: 10m
