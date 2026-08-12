@@ -1,6 +1,6 @@
 # Upgrading
 
-## To 0.53.0
+## To 0.54.0
 
 **Nothing is required.** 0.53.0 adds `dex` as a second bundled OIDC provider,
 disabled, and changes nothing for an install that does not enable it. Keycloak

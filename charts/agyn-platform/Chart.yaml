@@ -2,7 +2,7 @@ apiVersion: v2
 name: agyn-platform
 description: Umbrella chart for Agyn production platform workloads.
 type: application
-version: 0.53.0
+version: 0.54.0
 appVersion: "0.1.0"
 home: https://github.com/agynio/platform-charts
 sources:
@@ -36,7 +36,7 @@ dependencies:
   # against, so the kinds are established by the same release that uses them.
   - name: platform-controller
     repository: oci://ghcr.io/agynio/charts
-    version: 0.1.4
+    version: 0.2.0
     condition: platform-controller.enabled
   # Optional in-cluster database, so the umbrella can stand up a working
   # platform on its own. Production points platform.database at a managed
@@ -195,19 +195,19 @@ dependencies:
     condition: media-proxy.enabled
   - name: chat-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.5.5
+    version: 0.5.6
     condition: chat-app.enabled
   - name: console-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.25.0
+    version: 0.25.1
     condition: console-app.enabled
   - name: tracing-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.6.0
+    version: 0.6.3
     condition: tracing-app.enabled
   - name: sandboxes-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.2.0
+    version: 0.2.1
     condition: sandboxes-app.enabled
   - name: redis
     alias: notifications-redis
