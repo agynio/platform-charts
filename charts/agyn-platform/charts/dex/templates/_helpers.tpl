@@ -61,6 +61,22 @@ database-password
 {{- end -}}
 {{- end -}}
 
+{{- /* An app origin names the port the browser outside the cluster reaches it
+       on. A browser inside the cluster reaches the same host through the
+       ingress on 443 and so sends the address without one -- a different
+       origin to Dex, which compares both of these by string. The in-cluster
+       form is carried alongside the configured one rather than instead of it,
+       because both are real: the E2E suites run in a pod, everyone else does
+       not. An origin with no explicit port already covers both. */ -}}
+{{- define "dex.originForms" -}}
+{{- $bare := regexReplaceAll ":[0-9]+$" . "" -}}
+{{- if eq $bare . -}}
+{{- toJson (list .) -}}
+{{- else -}}
+{{- toJson (list . $bare) -}}
+{{- end -}}
+{{- end -}}
+
 {{- /* The Dex configuration file. Rendered here rather than in the ConfigMap so
        the Deployment can hash it and roll the pod: Dex reads this once, at
        start, and a change that does not restart it never takes effect. */ -}}
@@ -72,11 +88,15 @@ database-password
 {{- $clients := list -}}
 {{- range $app, $origin := .Values.appOrigins }}
 {{- if $origin }}
+{{- $redirects := list -}}
+{{- range $form := (include "dex.originForms" $origin | fromJsonArray) }}
+{{- $redirects = append $redirects (printf "%s%s" $form $.Values.callbackPath) -}}
+{{- end }}
 {{- $clients = append $clients (dict
       "id" (printf "agyn-%s" $app)
       "name" (printf "Agyn %s" (title $app))
       "public" true
-      "redirectURIs" (list (printf "%s%s" $origin $.Values.callbackPath)))
+      "redirectURIs" $redirects)
 -}}
 {{- end }}
 {{- end }}
@@ -86,7 +106,9 @@ database-password
 {{- $origins = list -}}
 {{- range $app, $origin := .Values.appOrigins }}
 {{- if $origin }}
-{{- $origins = append $origins $origin -}}
+{{- range $form := (include "dex.originForms" $origin | fromJsonArray) }}
+{{- $origins = append $origins $form -}}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

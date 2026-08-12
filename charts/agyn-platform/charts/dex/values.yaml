@@ -128,6 +128,11 @@ appOrigins:
 
 # Dex matches redirect URIs exactly — there is no wildcard form — so the apps'
 # callback path is named here rather than covered by `<origin>/*`.
+#
+# An origin carrying an explicit port also gets its port-less form, as a second
+# redirect URI and a second allowed origin: inside the cluster the same app is
+# reached through the ingress on 443, and that address is a different origin to
+# Dex even though it is the same application.
 callbackPath: /callback
 
 # Origins allowed to call /token, /keys and /.well-known from a browser. Dex
