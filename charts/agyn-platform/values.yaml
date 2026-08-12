@@ -832,9 +832,14 @@ identity:
       cpu: 500m
       memory: 256Mi
 
-# Bundled OIDC provider. On by default so an install authenticates without an
-# external issuer being supplied; an install with its own IdP turns it off and
-# points platform.oidc at that instead.
+# The previous bundled provider, kept for installs that already authenticate
+# against it. Off: dex is what a bundled install gets now. An install with its
+# own IdP leaves both off and points platform.oidc at that instead.
+#
+# Moving an existing install to dex is not just a flag. An account is keyed on
+# the subject its issuer asserts, so the same person signing in through a new
+# issuer arrives as a new account while the old one keeps the address. Change
+# issuer deliberately, or leave this on.
 #
 # externalUrl is the token issuer. It has to be a URL that resolves both in the
 # browser and inside the cluster, because the Gateway fetches discovery from it
@@ -855,19 +860,27 @@ keycloak:
 # nothing else -- except that Dex identifies a static user by email address, so
 # the bundled admin signs in as admin@agyn.dev rather than admin.
 #
-# Enable at most one of keycloak and dex, and give each its own hostname if both
-# are on: two VirtualServices for one host merge into a route set whose order
-# across resources is not defined, and a `/` prefix on either swallows the other.
+# The bundled OIDC provider. On by default, so an install authenticates without
+# an external issuer being supplied: it does Keycloak's job here in 7Mi from a
+# 42MiB image, against 596Mi from 237MiB behind a schema migration.
 #
-# Two things Keycloak does that Dex 2.45 does not:
-#   - no end_session_endpoint, so oidc-client-ts signoutRedirect() throws rather
-#     than clearing the session. Dex holds no browser session to end, so dropping
-#     the local tokens is a complete sign-out -- but the apps do not do that yet.
-#   - no SSO cookie, so each app asks for the password separately, and again in
-#     each new tab (the apps keep tokens in sessionStorage).
-# Both are tracked upstream in dexidp/dex#4560.
+# It serves `auth.`, the same hostname the previous provider used, because the
+# name belongs to the role and not to whatever fills it. Every consumer's issuer
+# then survives a change of provider, and one value moves instead of six.
+#
+# The consequence is that both cannot be on at their defaults: two
+# VirtualServices for one host merge into a route set whose order across
+# resources is not defined, and a `/` prefix on either swallows the other. An
+# install moving from one to the other gives one of them a hostname of its own;
+# the chart fails the render rather than letting that be found in a browser.
+#
+# One thing Keycloak does that Dex 2.45 does not: it holds an SSO cookie, so
+# each app asks for the password separately, and again in each new tab (the apps
+# keep tokens in sessionStorage). Tracked upstream in dexidp/dex#4560. Sign-out
+# no longer differs -- the apps drop their tokens when a provider publishes no
+# end_session_endpoint.
 dex:
-  enabled: false
+  enabled: true
   database:
     host: platform-postgres
     name: dex

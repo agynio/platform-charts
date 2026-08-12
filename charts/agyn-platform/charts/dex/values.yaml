@@ -39,14 +39,19 @@ terminationGracePeriodSeconds: null
 # be configured with exactly the same string — zitadel/oidc rejects a discovery
 # document whose issuer differs from the URL it was fetched from.
 #
-# A hostname of its own, not the keycloak subchart's `auth.`: two VirtualServices
-# on one host merge into a route set whose order across resources is not defined,
-# so a `/` prefix on either one can swallow the other. Separate hosts let both
-# providers run at once while an install is being moved from one to the other.
+# `auth.`, the same hostname the previous provider served: the name belongs to
+# the role, not to whatever fills it. A consumer's issuer then survives a change
+# of provider, and switching one is one value rather than six.
+#
+# Both providers therefore cannot run at their defaults -- two VirtualServices
+# for one host merge into a route set whose order across resources is not
+# defined, so a `/` prefix on either swallows the other. An install moving
+# between them gives one a hostname of its own; the umbrella fails the render
+# rather than letting that be discovered in a browser.
 #
 # Defaults to the bundle VM's own address: agyn.dev is BASE_DOMAIN and 2496 is
 # INGRESS_HOST_PORT, both defaulted the same way in install-platform.sh.
-externalUrl: https://dex.agyn.dev:2496
+externalUrl: https://auth.agyn.dev:2496
 
 # Everything needed to reach externalUrl, owned by this chart so an upgrade
 # delivers it — the same arrangement the keycloak subchart carries, for the same

@@ -1,5 +1,36 @@
 # Upgrading
 
+## To 0.55.0
+
+**Dex is the bundled provider now, and it serves `auth.`.** An install that sets
+nothing gets Dex; one that sets `keycloak.enabled: true` must now also set
+`dex.enabled: false`, or the render fails naming the hostname they collide on.
+That refusal is deliberate: two VirtualServices for one host merge into a route
+set whose order across resources is not defined, so a `/` prefix on either
+swallows the other and which one wins changes between applies.
+
+The hostname moved from `dex.` to `auth.` because the name belongs to the role
+rather than to whatever fills it. A consumer's issuer then survives a change of
+provider, and moving between them is one value instead of six.
+
+**Switching provider on an install that has users is not a flag.** An account is
+keyed on the subject its issuer asserts, so the same person signing in through a
+new issuer arrives as a new account while the old one keeps the address and
+whatever roles were granted to it. Installs with real users should stay on
+Keycloak (`keycloak.enabled: true`, `dex.enabled: false`) until that migration is
+worth doing deliberately.
+
+The issuer itself changes shape: Keycloak serves it at
+`https://auth.<domain>/realms/<realm>`, Dex at `https://auth.<domain>` with no
+path. Everything configured with the issuer moves together —
+`platform.oidc.issuerUrl`, `gateway.gateway.oidcIssuerUrl`, `media-proxy`'s
+`oidcIssuerUrl`, and the four apps' `oidcAuthority`.
+
+One difference remains against Keycloak: Dex holds no SSO cookie, so each app
+asks for the password separately, and again in each new tab. Tracked upstream in
+dexidp/dex#4560. Sign-out no longer differs — the apps drop their tokens when a
+provider publishes no `end_session_endpoint`.
+
 ## To 0.54.0
 
 **Nothing is required.** 0.53.0 adds `dex` as a second bundled OIDC provider,
