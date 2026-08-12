@@ -1,5 +1,41 @@
 # Upgrading
 
+## To 0.57.0
+
+**Nothing is required for an install whose apps sit at `<product>.<domain>`.**
+The frontends used to find each other by replacing the first label of their own
+hostname, which is right only under that layout. They are now told the addresses
+instead, through a ConfigMap derived from `platform.ingress.routes` — the same
+routes that build the VirtualServices — so a custom subdomain is declared once
+and the switcher follows it. Where an address is absent the old derivation still
+runs, so an install that changes nothing behaves as it did.
+
+**An install that owns its ingress has to name them.** With
+`platform.ingress.enabled: false` there are no routes to derive from, and the
+frontends fall back to guessing. Set the ones you serve:
+
+```yaml
+platform:
+  externalUrls:
+    chat: https://chat.example.com
+    tracing: https://tracing.example.com
+    console: https://console.example.com
+    sandboxes: https://sandboxes.example.com
+    mediaProxy: https://media.example.com
+```
+
+These also take a port, which no derivation from a hostname would have produced.
+
+**`chat-app.mediaProxyUrl` is gone.** It was an entry in the chart's `env:`
+block, and an explicit environment variable — empty included — shadows the
+ConfigMap the umbrella feeds these through. Leaving it would have kept the media
+proxy guessing while the other four were told. Set
+`platform.externalUrls.mediaProxy` instead, or `chat-app.extraEnvVars` for a
+standalone install.
+
+0.56.0 shipped the umbrella half of this against the previous app charts, which
+ignore it. 0.57.0 is the first version where the setting reaches the browser.
+
 ## To 0.55.0
 
 **Dex is the bundled provider now, and it serves `auth.`.** An install that sets
