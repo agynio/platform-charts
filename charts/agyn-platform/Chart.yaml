@@ -86,11 +86,11 @@ dependencies:
     condition: image-proxy.enabled
   - name: agents
     repository: oci://ghcr.io/agynio/charts
-    version: 0.14.0
+    version: 0.15.0
     condition: agents.enabled
   - name: agents-orchestrator
     repository: oci://ghcr.io/agynio/charts
-    version: 0.20.0
+    version: 0.20.1
     condition: agents-orchestrator.enabled
   - name: threads
     repository: oci://ghcr.io/agynio/charts
@@ -120,16 +120,18 @@ dependencies:
     version: 0.2.2
     condition: keycloak.enabled
   # The same job in a fraction of the footprint -- 7Mi resident against
-  # Keycloak's 596Mi, from a 42MiB image against 237MiB -- for installs that
-  # cannot carry Keycloak. Off by default: it has no RP-initiated logout
-  # endpoint and no browser SSO session, which the apps notice.
+  # Keycloak's 596Mi, from a 42MiB image against 237MiB -- and now on by
+  # default. It holds a browser session and publishes an end_session_endpoint
+  # since 0.3.0, so the two differ in footprint rather than in what the apps
+  # get. That build is unreleased upstream and pinned by digest; see the
+  # subchart's values.
   - name: dex
     repository: file://charts/dex
     version: 0.3.0
     condition: dex.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts
-    version: 0.6.6
+    version: 0.6.7
     condition: authorization.enabled
   - name: groups
     repository: file://charts/groups
