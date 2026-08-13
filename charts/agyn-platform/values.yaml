@@ -882,11 +882,12 @@ keycloak:
 # install moving from one to the other gives one of them a hostname of its own;
 # the chart fails the render rather than letting that be found in a browser.
 #
-# One thing Keycloak does that Dex 2.45 does not: it holds an SSO cookie, so
+# One thing Keycloak does that this still does not: it holds an SSO cookie, so
 # each app asks for the password separately, and again in each new tab (the apps
-# keep tokens in sessionStorage). Tracked upstream in dexidp/dex#4560. Sign-out
-# no longer differs -- the apps drop their tokens when a provider publishes no
-# end_session_endpoint.
+# keep tokens in sessionStorage). The pinned build implements sessions
+# (dexidp/dex#4560), but they stay off until DEX_SESSIONS_ENABLED is set and the
+# chart renders no session config yet. Sign-out no longer differs -- the apps
+# drop their tokens when a provider publishes no end_session_endpoint.
 dex:
   enabled: true
   database:
