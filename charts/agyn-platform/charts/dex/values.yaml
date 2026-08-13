@@ -7,10 +7,14 @@ global:
   imageRegistry: ""
   imagePullSecrets: []
 
+# A digest, not a tag: no release carries the session work, and dex's `latest`
+# is pushed on merges to master rather than on release, so it is not a stable
+# reference either. service-base renders `registry/repository:tag`, which is why
+# the digest splits across the two fields below. Currently master @ ab64ed77.
 image:
   registry: ghcr.io
-  repository: dexidp/dex
-  tag: v2.45.1
+  repository: dexidp/dex@sha256
+  tag: af9469509350ff3f6ca70127175a58e5ab085b9d18740fa4a590d9f03f0a026b
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -223,6 +227,39 @@ config:
   refreshTokenExpiry:
     absoluteLifetime: ""
     validIfNotUsedFor: 24h
+
+  # A server-side session plus an HttpOnly cookie: SSO across the apps, no
+  # second password prompt in each new tab, and a sign-out that ends the session
+  # rather than only discarding the browser's copy of the tokens.
+  #
+  # Unreleased upstream (dexidp/dex#4560), which is why the image is pinned to a
+  # digest, and gated behind DEX_SESSIONS_ENABLED -- set from `enabled` here.
+  #
+  # This does not stop the apps holding tokens in Web Storage. They ask for
+  # offline_access and get a refresh token; dropping that is a change in the
+  # apps, not here.
+  sessions:
+    # Turning this on changes sign-out in every app: they feature-detect
+    # end_session_endpoint, which discovery publishes only with sessions on, so
+    # they begin doing an RP-initiated logout. Dex rejects a
+    # post_logout_redirect_uri it has no record of, which is why each client
+    # below registers its origin as one.
+    enabled: true
+    cookieName: dex_session
+    # Session age, and the idle timeout inside it. validIfNotUsedFor must not
+    # exceed absoluteLifetime; Dex refuses to start otherwise.
+    absoluteLifetime: 24h
+    validIfNotUsedFor: 1h
+    rememberMeCheckedByDefault: true
+    # AES key for the cookie: 16, 24 or 32 bytes, empty leaves it unencrypted.
+    # Unencrypted is Dex's own default and carries a session id and a secret
+    # rather than any claim, over a cookie that is HttpOnly and Secure. Set it
+    # and the value reaches Dex through an env var, never the ConfigMap.
+    cookieEncryptionKey: ""
+    # Clients that share one signed-in browser session. Empty means every client
+    # appOrigins renders, which is the realm-wide SSO the previous provider had.
+    # Name a subset to narrow it.
+    ssoSharedWith: []
 
 # runAsUser is not redundant with runAsNonRoot: the image declares `USER dex:dex`
 # by name, and kubelet cannot prove a name is non-root -- it refuses to start the

@@ -69,15 +69,36 @@ database-password
 {{- $dbHost := required "dex.database.host is required" .Values.database.host -}}
 {{- $c := .Values.config -}}
 
+{{- $sessions := $c.sessions | default dict -}}
+
+{{- /* Client IDs first: with sessions on, each client names the others it
+       shares a signed-in browser with, so the set has to be known before any
+       one of them is built. */ -}}
+{{- $clientIDs := list -}}
+{{- range $app, $origin := .Values.appOrigins }}
+{{- if $origin }}
+{{- $clientIDs = append $clientIDs (printf "agyn-%s" $app) -}}
+{{- end }}
+{{- end }}
+{{- $sharedWith := $sessions.ssoSharedWith | default $clientIDs -}}
+
 {{- $clients := list -}}
 {{- range $app, $origin := .Values.appOrigins }}
 {{- if $origin }}
-{{- $clients = append $clients (dict
+{{- $client := dict
       "id" (printf "agyn-%s" $app)
       "name" (printf "Agyn %s" (title $app))
       "public" true
-      "redirectURIs" (list (printf "%s%s" $origin $.Values.callbackPath)))
+      "redirectURIs" (list (printf "%s%s" $origin $.Values.callbackPath))
 -}}
+{{- if $sessions.enabled -}}
+{{- /* The apps pass their own origin as post_logout_redirect_uri, and Dex
+       matches the registered list exactly -- an unregistered one is a 400 on
+       sign-out, not a fallback. */ -}}
+{{- $_ := set $client "postLogoutRedirectURIs" (list $origin) -}}
+{{- $_ := set $client "ssoSharedWith" $sharedWith -}}
+{{- end -}}
+{{- $clients = append $clients $client -}}
 {{- end }}
 {{- end }}
 
@@ -154,6 +175,24 @@ database-password
       "staticPasswords" $passwords
       "staticClients" $clients
 -}}
+
+{{- if $sessions.enabled -}}
+{{- $s := dict
+      "cookieName" $sessions.cookieName
+      "absoluteLifetime" $sessions.absoluteLifetime
+      "validIfNotUsedFor" $sessions.validIfNotUsedFor
+      "rememberMeCheckedByDefault" $sessions.rememberMeCheckedByDefault
+-}}
+{{- /* Dex expands env vars in the storage, signer and connector sections only,
+       so the DEX_DB_PASSWORD trick is not available here. The image's
+       entrypoint runs gomplate over the config first, which is: the key stays
+       in the Secret and the ConfigMap carries the lookup. */ -}}
+{{- if $sessions.cookieEncryptionKey -}}
+{{- $_ := set $s "cookieEncryptionKey" (printf "{{ getenv %q }}" "DEX_SESSION_COOKIE_KEY") -}}
+{{- end -}}
+{{- $_ := set $config "sessions" $s -}}
+{{- end -}}
+
 {{- toYaml (mergeOverwrite $config (deepCopy (.Values.extraConfig | default dict))) -}}
 {{- end -}}
 
@@ -166,6 +205,15 @@ database-password
 
 {{- $secretEnv := list -}}
 {{- $secretEnv = append $secretEnv (dict "name" "DEX_DB_PASSWORD" "valueFrom" (dict "secretKeyRef" (dict "name" (include "dex.databaseSecretName" $root) "key" (include "dex.databasePasswordKey" $root)))) -}}
+{{- $sessions := $root.Values.config.sessions | default dict -}}
+{{- if $sessions.enabled -}}
+{{- /* The feature is behind a Dex feature flag, not a config key: without this
+       Dex refuses to start on a config that carries a sessions block. */ -}}
+{{- $secretEnv = append $secretEnv (dict "name" "DEX_SESSIONS_ENABLED" "value" "true") -}}
+{{- if $sessions.cookieEncryptionKey -}}
+{{- $secretEnv = append $secretEnv (dict "name" "DEX_SESSION_COOKIE_KEY" "valueFrom" (dict "secretKeyRef" (dict "name" (include "dex.secretName" $root) "key" "session-cookie-key"))) -}}
+{{- end -}}
+{{- end -}}
 {{- range $user := $root.Values.users | default (list) -}}
 {{- $secretEnv = append $secretEnv (dict "name" (include "dex.hashEnvName" $user) "valueFrom" (dict "secretKeyRef" (dict "name" (include "dex.secretName" $root) "key" (include "dex.hashSecretKey" $user)))) -}}
 {{- end -}}
