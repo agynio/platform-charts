@@ -127,7 +127,7 @@ dependencies:
   # subchart's values.
   - name: dex
     repository: file://charts/dex
-    version: 0.4.0
+    version: 0.3.0
     condition: dex.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts
