@@ -201,15 +201,15 @@ dependencies:
     condition: chat-app.enabled
   - name: console-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.29.0
+    version: 0.30.0
     condition: console-app.enabled
   - name: tracing-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.7.0
+    version: 0.8.0
     condition: tracing-app.enabled
   - name: sandboxes-app
     repository: oci://ghcr.io/agynio/charts
-    version: 0.4.0
+    version: 0.5.0
     condition: sandboxes-app.enabled
   - name: redis
     alias: notifications-redis

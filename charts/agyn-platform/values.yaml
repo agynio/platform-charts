@@ -1041,6 +1041,10 @@ media-proxy:
 # platform.oidc to an issuer on another domain has to put offline_access back,
 # because the browser blocks the frame there and nothing in discovery says so --
 # the tokens simply expire and the user is sent back to sign in.
+#
+# chat-app is not on the list yet. The scope can only be narrowed for an image
+# that answers the renewal frame, and 0.7.0 predates that -- narrowing it first
+# is the same silent expiry. It joins them when its next release ships.
 console-app:
   extraEnvVarsCM: agyn-platform-app-urls
   oidcScope: "openid profile email"
@@ -1054,7 +1058,6 @@ console-app:
 
 chat-app:
   extraEnvVarsCM: agyn-platform-app-urls
-  oidcScope: "openid profile email"
   resources:
     requests:
       cpu: 10m
