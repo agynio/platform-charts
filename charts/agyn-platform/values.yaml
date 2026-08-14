@@ -443,7 +443,15 @@ minio:
     requests:
       cpu: 10m
       memory: 256Mi
-  buckets: []
+  # The bucket the files service is configured with, at s3.bucket above. minio
+  # is enabled here so files has a working store without one being supplied, and
+  # a store without its bucket is not one: every upload fails with "store file:
+  # put object: The specified bucket does not exist". Named again rather than
+  # referenced because a subchart's values are not templated.
+  buckets:
+    - name: agyn-files
+      policy: none
+      purge: false
   users: []
   policies: []
   customCommands: []
