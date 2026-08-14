@@ -85,11 +85,15 @@ database-password
 {{- $clients := list -}}
 {{- range $app, $origin := .Values.appOrigins }}
 {{- if $origin }}
+{{- $redirects := list (printf "%s%s" $origin $.Values.callbackPath) -}}
+{{- if $.Values.silentRenewPath -}}
+{{- $redirects = append $redirects (printf "%s%s" $origin $.Values.silentRenewPath) -}}
+{{- end -}}
 {{- $client := dict
       "id" (printf "agyn-%s" $app)
       "name" (printf "Agyn %s" (title $app))
       "public" true
-      "redirectURIs" (list (printf "%s%s" $origin $.Values.callbackPath))
+      "redirectURIs" $redirects
 -}}
 {{- if $sessions.enabled -}}
 {{- /* The apps pass their own origin as post_logout_redirect_uri, and Dex

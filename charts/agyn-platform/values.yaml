@@ -1029,8 +1029,25 @@ media-proxy:
 # Every frontend renders the same product switcher, so each one needs all four
 # addresses. They arrive through envFrom rather than env: an explicit empty env
 # var would shadow the ConfigMap and re-enable the hostname guessing.
+#
+# No offline_access either, which the app charts ask for on their own. A refresh
+# token is the renewal that works anywhere, and it is also the only credential a
+# tab holds long enough to be worth stealing -- so it is dropped wherever it can
+# be. It can be here: the apps and the issuer are siblings under one domain, the
+# renewal frame is first-party to it, and the session it renews against is a
+# cookie script cannot read.
+#
+# That reasoning is about the addresses, not the provider. An install that moves
+# platform.oidc to an issuer on another domain has to put offline_access back,
+# because the browser blocks the frame there and nothing in discovery says so --
+# the tokens simply expire and the user is sent back to sign in.
+#
+# chat-app is not on the list yet. The scope can only be narrowed for an image
+# that answers the renewal frame, and 0.7.0 predates that -- narrowing it first
+# is the same silent expiry. It joins them when its next release ships.
 console-app:
   extraEnvVarsCM: agyn-platform-app-urls
+  oidcScope: "openid profile email"
   resources:
     requests:
       cpu: 10m
@@ -1051,6 +1068,7 @@ chat-app:
 
 tracing-app:
   extraEnvVarsCM: agyn-platform-app-urls
+  oidcScope: "openid profile email"
   resources:
     requests:
       cpu: 10m
@@ -1061,6 +1079,7 @@ tracing-app:
 
 sandboxes-app:
   extraEnvVarsCM: agyn-platform-app-urls
+  oidcScope: "openid profile email"
   resources:
     requests:
       cpu: 10m
