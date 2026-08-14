@@ -134,6 +134,17 @@ appOrigins:
 # callback path is named here rather than covered by `<origin>/*`.
 callbackPath: /callback
 
+# Where the hidden iframe lands when an app renews its token against the session
+# rather than against a refresh token. A second redirect URI, not a variant of
+# the first: Dex compares the whole string, so the callback entry does not cover
+# it and a renewal that arrives here is answered 400.
+#
+# Registered whether or not the apps use it yet. An app still asking for
+# offline_access renews from the refresh token and never opens the iframe, so
+# this sits unused until it stops -- and having it already registered is what
+# lets that be a change in the app alone.
+silentRenewPath: /silent-renew
+
 # Origins allowed to call /token, /keys and /.well-known from a browser. Dex
 # disables CORS entirely when the list is empty, which fails the code exchange
 # for every app. Defaults to appOrigins; set it to override.
