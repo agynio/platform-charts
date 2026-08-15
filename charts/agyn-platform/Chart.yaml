@@ -131,7 +131,7 @@ dependencies:
     condition: dex.enabled
   - name: authorization
     repository: oci://ghcr.io/agynio/charts
-    version: 0.6.7
+    version: 0.6.8
     condition: authorization.enabled
   - name: groups
     repository: file://charts/groups
