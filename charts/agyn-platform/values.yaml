@@ -1014,7 +1014,9 @@ llm-proxy:
       memory: 64Mi
     limits:
       cpu: 500m
-      memory: 256Mi
+      # A request body may be up to 32 MiB, held several times over while it
+      # is read, parsed and re-encoded for the provider.
+      memory: 1Gi
 
 files:
   resources:
