@@ -87,10 +87,23 @@ platform:
     orchestratorServiceAccount:
       name: agents-orchestrator
       namespace: ""
-    # Admitted on TouchWorkload and ReportWorkloadIdle when the call carries
-    # x-identity-id: agynd's keepalive and end of turn, forwarded as the agent.
+    # Admitted when the call carries x-identity-id on ListWorkloads,
+    # ListWorkloadsByAgentInstance, ListVolumesByAgentInstance, ListFlavors and
+    # ListStorageClasses, which the Console and the CLI read, and on
+    # TouchWorkload and ReportWorkloadIdle: agynd's keepalive and end of turn,
+    # forwarded as the agent.
     gatewayServiceAccount:
       name: gateway
+      namespace: ""
+    # Admitted on ListWorkloadsByAgentInstance when the call carries
+    # x-identity-id: a chat's activity status, read as its viewer.
+    chatServiceAccount:
+      name: chat
+      namespace: ""
+    # Admitted on DeleteOrganizationResources, one step of an organization's
+    # teardown.
+    organizationsServiceAccount:
+      name: organizations
       namespace: ""
     identityServiceAccounts:
       - name: gateway
@@ -101,6 +114,9 @@ platform:
         namespace: ""
       - name: chat
         namespace: ""
+    # Admitted on GetWorkload and TouchWorkload with no x-identity-id: the
+    # Terminal Proxy finds the runner hosting a workload and reports a terminal
+    # attached to it.
     internalServiceAccounts:
       - name: terminal-proxy
         namespace: ""

@@ -420,6 +420,14 @@
               "type": "object",
               "additionalProperties": true
             },
+            "chatServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "organizationsServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
             "identityServiceAccounts": {
               "type": "array"
             },
