@@ -8,6 +8,8 @@
 {{- $chatPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $chat) -}}
 {{- $organizations := required "platform.runnersAuthorizationPolicy.organizationsServiceAccount is required" $policy.organizationsServiceAccount -}}
 {{- $organizationsPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $organizations) -}}
+{{- $notifications := required "platform.runnersAuthorizationPolicy.notificationsServiceAccount is required" $policy.notificationsServiceAccount -}}
+{{- $notificationsPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $notifications) -}}
 {{- $identityPrincipals := list $orchestratorPrincipal -}}
 {{- range $policy.identityServiceAccounts | default list -}}
 {{- $identityPrincipals = append $identityPrincipals (include "agyn-platform.principal" (merge (dict "Release" $.Release) .)) -}}
@@ -23,13 +25,16 @@
   workloads with one. GetWorkload admits the identity callers, as the caller
   paths do, and the internal service accounts with no identity: the Terminal
   Proxy finds the runner hosting a workload after validating its own ticket,
-  and touches the workload while a terminal is attached. agynd reaches
+  and touches the workload while a terminal is attached. Notifications also
+  reaches GetWorkload with no identity, for the organization a workload:{id}
+  subscription is checked against: the room admits any member, and the
+  workload read as that member would ask for can_view_workloads. agynd reaches
   TouchWorkload and ReportWorkloadIdle through the Gateway as its workload's
   own identity, and the Runners service checks that identity owns the
   workload. Nothing reaches ReportWorkloadIdle without an identity.
   Organizations calls DeleteOrganizationResources as a step of its teardown.
-  The two identity rules at the end never refuse the Orchestrator; the rule
-  naming a method decides whether it reaches that method at all.
+  The identity rules at the end never refuse the Orchestrator; the rule naming
+  a method decides whether it reaches that method at all.
 */}}
 {{- $lookupPaths := list "/agynio.api.runners.v1.RunnersService/GetWorkload" -}}
 {{- $listPaths := list "/agynio.api.runners.v1.RunnersService/ListWorkloads" "/agynio.api.runners.v1.RunnersService/ListVolumesByAgentInstance" "/agynio.api.runners.v1.RunnersService/ListFlavors" "/agynio.api.runners.v1.RunnersService/ListStorageClasses" -}}
@@ -74,7 +79,7 @@ spec:
     - from:
         - source:
             notPrincipals:
-{{- range (concat $identityPrincipals $internalPrincipals) }}
+{{- range (concat $identityPrincipals $internalPrincipals (list $notificationsPrincipal) | uniq) }}
               - {{ . | quote }}
 {{- end }}
       to:
@@ -141,6 +146,20 @@ spec:
     - from:
         - source:
             notPrincipals:
+{{- range (append (prepend $internalPrincipals $orchestratorPrincipal) $notificationsPrincipal) }}
+              - {{ . | quote }}
+{{- end }}
+      when:
+        - key: request.headers[x-identity-id]
+          notValues:
+            - "*"
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $lookupPaths }}
+    - from:
+        - source:
+            notPrincipals:
 {{- range (prepend $internalPrincipals $orchestratorPrincipal) }}
               - {{ . | quote }}
 {{- end }}
@@ -151,5 +170,5 @@ spec:
       to:
         - operation:
             paths:
-{{ include "agyn-platform.pathList" (concat $lookupPaths $touchPaths $idlePaths) }}
+{{ include "agyn-platform.pathList" (concat $touchPaths $idlePaths) }}
 {{- end }}

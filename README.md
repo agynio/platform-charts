@@ -429,6 +429,9 @@ Runners chart policy. This keeps the existing caller-scoped Runners methods
 behind `x-identity-id`, while allowing the `terminal-proxy` service account to
 make the two calls it needs with no identity: `GetWorkload`, to find the runner
 hosting a workload, and `TouchWorkload`, while a terminal is attached.
+Notifications (`notificationsServiceAccount`) also reaches `GetWorkload` with no
+identity, to read the organization a `workload:{id}` subscription is checked
+against.
 
 The same policy admits the Gateway
 (`platform.runnersAuthorizationPolicy.gatewayServiceAccount`) on

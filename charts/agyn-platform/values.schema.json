@@ -428,6 +428,10 @@
               "type": "object",
               "additionalProperties": true
             },
+            "notificationsServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
             "identityServiceAccounts": {
               "type": "array"
             },

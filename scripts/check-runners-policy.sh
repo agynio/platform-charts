@@ -49,7 +49,7 @@ CreateWorkload                absent   allow  deny   deny   deny   deny   deny  
 CreateWorkload                present  allow  deny   deny   deny   deny   deny   deny   deny
 GetRunner                     absent   allow  deny   deny   deny   deny   deny   deny   deny
 GetRunner                     present  allow  deny   allow  allow  allow  allow  deny   deny
-GetWorkload                   absent   allow  allow  deny   deny   deny   deny   deny   deny
+GetWorkload                   absent   allow  allow  deny   deny   allow  deny   deny   deny
 GetWorkload                   present  allow  allow  allow  allow  allow  allow  deny   deny
 ListWorkloads                 absent   allow  deny   deny   deny   deny   deny   deny   deny
 ListWorkloads                 present  allow  deny   allow  deny   deny   deny   deny   deny

@@ -105,6 +105,11 @@ platform:
     organizationsServiceAccount:
       name: organizations
       namespace: ""
+    # Admitted on GetWorkload with no x-identity-id: the organization a
+    # workload:{id} subscription is checked against.
+    notificationsServiceAccount:
+      name: notifications
+      namespace: ""
     identityServiceAccounts:
       - name: gateway
         namespace: ""
