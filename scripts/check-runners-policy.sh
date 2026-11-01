@@ -41,20 +41,32 @@ fi
 
 # Service accounts in the release namespace. unlisted stands for any principal
 # the policy does not name.
-callers="agents-orchestrator terminal-proxy gateway expose notifications chat unlisted"
+callers="agents-orchestrator terminal-proxy gateway expose notifications chat organizations unlisted"
 
 # The verdict expected for each caller, in the order of ${callers}.
 cat >"${expected}" <<'EOF'
-CreateWorkload      absent   allow  deny   deny   deny   deny   deny   deny
-CreateWorkload      present  allow  deny   deny   deny   deny   deny   deny
-GetRunner           absent   allow  deny   deny   deny   deny   deny   deny
-GetRunner           present  allow  deny   allow  allow  allow  allow  deny
-ListWorkloads       absent   allow  allow  deny   deny   deny   deny   deny
-ListWorkloads       present  allow  allow  deny   deny   deny   deny   deny
-TouchWorkload       absent   allow  allow  deny   deny   deny   deny   deny
-TouchWorkload       present  allow  allow  allow  deny   deny   deny   deny
-ReportWorkloadIdle  absent   deny   deny   deny   deny   deny   deny   deny
-ReportWorkloadIdle  present  deny   deny   allow  deny   deny   deny   deny
+CreateWorkload                absent   allow  deny   deny   deny   deny   deny   deny   deny
+CreateWorkload                present  allow  deny   deny   deny   deny   deny   deny   deny
+GetRunner                     absent   allow  deny   deny   deny   deny   deny   deny   deny
+GetRunner                     present  allow  deny   allow  allow  allow  allow  deny   deny
+GetWorkload                   absent   allow  allow  deny   deny   allow  deny   deny   deny
+GetWorkload                   present  allow  allow  allow  allow  allow  allow  deny   deny
+ListWorkloads                 absent   allow  deny   deny   deny   deny   deny   deny   deny
+ListWorkloads                 present  allow  deny   allow  deny   deny   deny   deny   deny
+ListWorkloadsByAgentInstance  absent   allow  deny   deny   deny   deny   deny   deny   deny
+ListWorkloadsByAgentInstance  present  allow  deny   allow  deny   deny   allow  deny   deny
+ListVolumesByAgentInstance    absent   allow  deny   deny   deny   deny   deny   deny   deny
+ListVolumesByAgentInstance    present  allow  deny   allow  deny   deny   deny   deny   deny
+ListFlavors                   absent   allow  deny   deny   deny   deny   deny   deny   deny
+ListFlavors                   present  allow  deny   allow  deny   deny   deny   deny   deny
+ListStorageClasses            absent   allow  deny   deny   deny   deny   deny   deny   deny
+ListStorageClasses            present  allow  deny   allow  deny   deny   deny   deny   deny
+TouchWorkload                 absent   deny   allow  deny   deny   deny   deny   deny   deny
+TouchWorkload                 present  deny   allow  allow  deny   deny   deny   deny   deny
+ReportWorkloadIdle            absent   deny   deny   deny   deny   deny   deny   deny   deny
+ReportWorkloadIdle            present  deny   deny   allow  deny   deny   deny   deny   deny
+DeleteOrganizationResources   absent   deny   deny   deny   deny   deny   deny   allow  deny
+DeleteOrganizationResources   present  deny   deny   deny   deny   deny   deny   allow  deny
 EOF
 
 echo "verdict per caller: ${callers}"
@@ -129,7 +141,7 @@ awk -v namespace="${namespace}" -v callers="${callers}" '
   # An expected row: method, x-identity-id, then one verdict per caller.
   {
     method = "/agynio.api.runners.v1.RunnersService/" $1
-    row = sprintf("%-20s%-9s", $1, $2)
+    row = sprintf("%-30s%-9s", $1, $2)
     mismatch = 0
     for (c = 1; c <= caller_count; c++) {
       principal = "cluster.local/ns/" namespace "/sa/" caller[c]
