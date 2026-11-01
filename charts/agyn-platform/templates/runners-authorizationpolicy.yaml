@@ -2,6 +2,8 @@
 {{- $policy := .Values.platform.runnersAuthorizationPolicy -}}
 {{- $orchestrator := required "platform.runnersAuthorizationPolicy.orchestratorServiceAccount is required" $policy.orchestratorServiceAccount -}}
 {{- $orchestratorPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $orchestrator) -}}
+{{- $gateway := required "platform.runnersAuthorizationPolicy.gatewayServiceAccount is required" $policy.gatewayServiceAccount -}}
+{{- $gatewayPrincipal := include "agyn-platform.principal" (merge (dict "Release" .Release) $gateway) -}}
 {{- $identityPrincipals := list $orchestratorPrincipal -}}
 {{- range $policy.identityServiceAccounts | default list -}}
 {{- $identityPrincipals = append $identityPrincipals (include "agyn-platform.principal" (merge (dict "Release" $.Release) .)) -}}
@@ -11,7 +13,17 @@
 {{- $internalPrincipals = append $internalPrincipals (include "agyn-platform.principal" (merge (dict "Release" $.Release) .)) -}}
 {{- end -}}
 {{- $callerPaths := list "/agynio.api.runners.v1.RunnersService/RegisterRunner" "/agynio.api.runners.v1.RunnersService/GetRunner" "/agynio.api.runners.v1.RunnersService/ListRunners" "/agynio.api.runners.v1.RunnersService/UpdateRunner" "/agynio.api.runners.v1.RunnersService/DeleteRunner" "/agynio.api.runners.v1.RunnersService/GetWorkload" "/agynio.api.runners.v1.RunnersService/ListWorkloadsByThread" "/agynio.api.runners.v1.RunnersService/StreamWorkloadLogs" "/agynio.api.runners.v1.RunnersService/GetVolume" "/agynio.api.runners.v1.RunnersService/ListVolumes" "/agynio.api.runners.v1.RunnersService/ListVolumesByThread" -}}
-{{- $internalPaths := list "/agynio.api.runners.v1.RunnersService/ListWorkloads" "/agynio.api.runners.v1.RunnersService/TouchWorkload" -}}
+{{- /*
+  ListWorkloads and TouchWorkload admit the Orchestrator and the internal
+  service accounts by principal alone; they call with no identity. agynd
+  reaches TouchWorkload and ReportWorkloadIdle through the Gateway as its
+  workload's own identity, so the Gateway is admitted on those two only with
+  x-identity-id, and the Runners service checks that identity owns the
+  workload. Nothing reaches ReportWorkloadIdle without an identity.
+*/}}
+{{- $internalPaths := list "/agynio.api.runners.v1.RunnersService/ListWorkloads" -}}
+{{- $touchPaths := list "/agynio.api.runners.v1.RunnersService/TouchWorkload" -}}
+{{- $idlePaths := list "/agynio.api.runners.v1.RunnersService/ReportWorkloadIdle" -}}
 {{- $orchestratorPaths := list "/agynio.api.runners.v1.RunnersService/CreateWorkload" "/agynio.api.runners.v1.RunnersService/UpdateWorkload" "/agynio.api.runners.v1.RunnersService/UpdateWorkloadStatus" "/agynio.api.runners.v1.RunnersService/DeleteWorkload" "/agynio.api.runners.v1.RunnersService/BatchUpdateWorkloadSampledAt" "/agynio.api.runners.v1.RunnersService/CreateVolume" "/agynio.api.runners.v1.RunnersService/UpdateVolume" "/agynio.api.runners.v1.RunnersService/BatchUpdateVolumeSampledAt" -}}
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
@@ -59,6 +71,24 @@ spec:
     - from:
         - source:
             notPrincipals:
+{{- range (append $internalPrincipals $gatewayPrincipal) }}
+              - {{ . | quote }}
+{{- end }}
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $touchPaths }}
+    - from:
+        - source:
+            notPrincipals:
+              - {{ $gatewayPrincipal | quote }}
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" $idlePaths }}
+    - from:
+        - source:
+            notPrincipals:
               - {{ $orchestratorPrincipal | quote }}
       when:
         - key: request.headers[x-identity-id]
@@ -68,4 +98,18 @@ spec:
         - operation:
             paths:
 {{ include "agyn-platform.pathList" $callerPaths }}
+    - from:
+        - source:
+            notPrincipals:
+{{- range $internalPrincipals }}
+              - {{ . | quote }}
+{{- end }}
+      when:
+        - key: request.headers[x-identity-id]
+          notValues:
+            - "*"
+      to:
+        - operation:
+            paths:
+{{ include "agyn-platform.pathList" (concat $touchPaths $idlePaths) }}
 {{- end }}

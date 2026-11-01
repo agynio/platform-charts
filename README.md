@@ -105,7 +105,7 @@ helm dependency update charts/agyn-apps
 helm lint charts/agyn-platform charts/agyn-apps
 helm template agyn-platform charts/agyn-platform >/tmp/agyn-platform.yaml
 helm template agyn-apps charts/agyn-apps >/tmp/agyn-apps.yaml
-scripts/check-terminal-proxy-runners-policy.sh
+scripts/check-runners-policy.sh
 helm package charts/agyn-platform --destination .dist
 helm package charts/agyn-apps --destination .dist
 yamllint .
@@ -429,6 +429,15 @@ Runners chart policy. This keeps the existing caller-scoped Runners methods
 behind `x-identity-id`, while allowing the `terminal-proxy` service account to
 call only the internal unscoped Runners methods it needs:
 `ListWorkloads` and `TouchWorkload`.
+
+The same policy admits the Gateway
+(`platform.runnersAuthorizationPolicy.gatewayServiceAccount`) on
+`TouchWorkload` and `ReportWorkloadIdle`, and only when the call carries
+`x-identity-id`: agynd reports its activity and the end of a turn through the
+Gateway as its workload's own identity, and the Runners service checks that the
+identity owns the workload. An identity-less `TouchWorkload` still reaches only
+the Orchestrator and `terminal-proxy`, and an identity-less `ReportWorkloadIdle`
+is refused for every caller.
 
 ## Egress deployment contract
 

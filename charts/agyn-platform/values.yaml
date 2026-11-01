@@ -87,6 +87,11 @@ platform:
     orchestratorServiceAccount:
       name: agents-orchestrator
       namespace: ""
+    # Admitted on TouchWorkload and ReportWorkloadIdle when the call carries
+    # x-identity-id: agynd's keepalive and end of turn, forwarded as the agent.
+    gatewayServiceAccount:
+      name: gateway
+      namespace: ""
     identityServiceAccounts:
       - name: gateway
         namespace: ""

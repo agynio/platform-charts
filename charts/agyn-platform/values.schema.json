@@ -416,6 +416,10 @@
               "type": "object",
               "additionalProperties": true
             },
+            "gatewayServiceAccount": {
+              "type": "object",
+              "additionalProperties": true
+            },
             "identityServiceAccounts": {
               "type": "array"
             },
