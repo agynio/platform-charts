@@ -437,6 +437,13 @@ minio:
   # that names nothing still gets a working one.
   enabled: true
   fullnameOverride: minio
+  # MinIO stopped publishing images; these are rebuilt from upstream source.
+  image:
+    repository: ghcr.io/agynio/minio
+    tag: RELEASE.2024-12-18T13-15-44Z
+  mcImage:
+    repository: ghcr.io/agynio/mc
+    tag: RELEASE.2024-11-21T17-21-54Z
   mode: standalone
   replicas: 1
   rootUser: minioadmin
