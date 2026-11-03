@@ -427,17 +427,29 @@ When Terminal Proxy is enabled, `agyn-platform` renders the Runners
 `runners-internal` AuthorizationPolicy directly and disables the upstream
 Runners chart policy. This keeps the existing caller-scoped Runners methods
 behind `x-identity-id`, while allowing the `terminal-proxy` service account to
-call only the internal unscoped Runners methods it needs:
-`ListWorkloads` and `TouchWorkload`.
+make the two calls it needs with no identity: `GetWorkload`, to find the runner
+hosting a workload, and `TouchWorkload`, while a terminal is attached.
+Notifications (`notificationsServiceAccount`) also reaches `GetWorkload` with no
+identity, to read the organization a `workload:{id}` subscription is checked
+against.
 
 The same policy admits the Gateway
 (`platform.runnersAuthorizationPolicy.gatewayServiceAccount`) on
 `TouchWorkload` and `ReportWorkloadIdle`, and only when the call carries
 `x-identity-id`: agynd reports its activity and the end of a turn through the
 Gateway as its workload's own identity, and the Runners service checks that the
-identity owns the workload. An identity-less `TouchWorkload` still reaches only
-the Orchestrator and `terminal-proxy`, and an identity-less `ReportWorkloadIdle`
-is refused for every caller.
+identity owns the workload. An identity-less `TouchWorkload` reaches only
+`terminal-proxy`, and an identity-less `ReportWorkloadIdle` is refused for every
+caller.
+
+`ListWorkloads`, `ListVolumesByAgentInstance`, `ListFlavors` and
+`ListStorageClasses` admit the Orchestrator, and the Gateway when the call
+carries `x-identity-id`. `ListWorkloadsByAgentInstance` admits the same two, and
+Chat (`chatServiceAccount`) with an identity. `DeleteOrganizationResources`
+admits only Organizations (`organizationsServiceAccount`). The methods a runner
+calls through the Gateway, `EnrollRunner`, `ReportRunnerCatalog` and
+`ReportWorkloadState`, authenticate the runner's service token and are not
+restricted by this policy.
 
 ## Egress deployment contract
 
